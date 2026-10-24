@@ -76,12 +76,18 @@ async function telaAjustes(el) {
   el.querySelector('[data-acao=exportar]').onclick = async () => { try { await exportarBackup(); } catch (e) { toast(e.message, 'erro'); } };
   el.querySelector('[data-acao=importar]').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
-    try { const n = await importarBackup(f); toast(`${n} registro(s) importado(s)`, 'sucesso'); } catch (err) { toast(err.message, 'erro', 5000); }
     e.target.value = '';
+    // Se for o CSV do Hevy escolhido no botão errado, importa do mesmo jeito
+    const inicio = (await f.slice(0, 500).text()).toLowerCase();
+    if (inicio.includes('exercise_title')) { importarDoHevy(f); return; }
+    try { const n = await importarBackup(f); toast(`${n} registro(s) importado(s)`, 'sucesso'); } catch (err) { toast(err.message, 'erro', 5000); }
   };
-  el.querySelector('[data-acao=hevy]').onchange = async e => {
+  el.querySelector('[data-acao=hevy]').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
     e.target.value = '';
+    importarDoHevy(f);
+  };
+  async function importarDoHevy(f) {
     toast('Importando…');
     try {
       const r = await importarHevy(f);
@@ -92,7 +98,7 @@ async function telaAjustes(el) {
         acoes: [{ texto: 'Ver histórico', classe: 'btn-primario', valor: true }],
       }).then(v => { if (v) location.hash = '#/historico'; });
     } catch (err) { toast(err.message, 'erro', 6000); }
-  };
+  }
   el.querySelector('[data-acao=atualizar]').onclick = async () => {
     const reg = await navigator.serviceWorker?.getRegistration();
     await reg?.update();
