@@ -8,7 +8,7 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v7';
+const VERSAO = 'v8';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
 

@@ -487,12 +487,12 @@ label.linha-lista { cursor: pointer; }
   .tabbar a.ativa { background: var(--destaque-suave); }
   .topbar { margin-left: var(--lateral); padding-left: 32px; padding-right: 24px; }
   .content { margin-left: var(--lateral); padding: 24px 32px 48px; }
-  .tela { max-width: 980px; margin: 0 auto; }
+  .tela { max-width: none; margin: 0; }
   body.com-barra-treino .content { padding-bottom: 110px; }
   .painel-descanso, .barra-treino { left: calc(var(--lateral) + 24px); right: auto; width: min(560px, calc(100vw - var(--lateral) - 48px)); bottom: 20px; }
   .grade-cartoes { grid-template-columns: repeat(3, 1fr); }
   .grade-hoje { grid-template-columns: repeat(3, 1fr); }
-  .tela-sessao { max-width: 760px; }
+  .tela-sessao { max-width: none; }
 }
 
 /* ==========================================================================
@@ -561,7 +561,7 @@ label.linha-lista { cursor: pointer; }
   .faixa-recordes { grid-auto-columns: minmax(220px, 1fr); }
 }
 @media (min-width: 900px) {
-  .tela.tela-perfil { max-width: 1100px; }
+  .tela.tela-perfil { max-width: none; }
   .perfil-cab { flex-direction: row; align-items: center; justify-content: space-between; }
   .perfil-numeros { border-top: 0; padding-top: 0; gap: 28px; }
 }
@@ -741,4 +741,10 @@ code { background: var(--vidro-forte); }
   .topbar { margin-left: var(--lateral); padding-left: 16px; background: transparent; border-bottom: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .content { margin-left: var(--lateral); padding: 16px 32px 48px 16px; }
   .painel-descanso, .barra-treino { left: calc(var(--lateral) + 16px); bottom: 20px; }
+}
+@media (min-width: 1500px) {
+  .grade-cartoes { grid-template-columns: repeat(4, 1fr); }
+  .grade-hoje { grid-template-columns: repeat(4, 1fr); }
+  .grade-stats { grid-template-columns: repeat(6, 1fr); }
+  .content { padding-right: 24px; }
 }
