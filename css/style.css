@@ -821,3 +821,8 @@ body.modo-sessao .topbar { display: none; }
 .foto-opcao img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; }
 .foto-opcao span { font-size: 12px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .foto-opcao small { font-size: 11px; color: var(--texto-2); }
+.avatar-ex.com-foto.desenho img { object-fit: contain; padding: 1px; }
+.foto-exercicio.desenho { grid-template-columns: 1fr 1fr; max-width: 640px; }
+.foto-exercicio.desenho img { aspect-ratio: 1; object-fit: contain; background: #fff; padding: 8px; }
+@media (max-width: 600px) { .foto-exercicio.desenho { grid-template-columns: 1fr 1fr; } .foto-exercicio.desenho img + img { display: block; } }
+.foto-opcao.desenho img { background: #fff; object-fit: contain; padding: 4px; }

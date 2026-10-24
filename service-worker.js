@@ -8,7 +8,7 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v11';
+const VERSAO = 'v12';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
 const CACHE_FOTOS = 'fotos-v1'; // fotos dos exercícios (não mudam)
@@ -85,7 +85,7 @@ self.addEventListener('fetch', (event) => {
   if (url.hostname.endsWith('.supabase.co') || url.hostname.endsWith('.supabase.in')) return;
 
   // Bibliotecas do CDN, fontes e fotos dos exercícios: cache primeiro
-  const foto = url.hostname === 'raw.githubusercontent.com' || (url.origin === self.location.origin && url.pathname.includes('/img/exercicios/'));
+  const foto = url.hostname === 'raw.githubusercontent.com' || (url.origin === self.location.origin && (url.pathname.includes('/img/exercicios/') || url.pathname.includes('/img/desenhos/')));
   if (foto || url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith((async () => {
       const cache = await caches.open(foto ? CACHE_FOTOS : CACHE_CDN);

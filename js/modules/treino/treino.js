@@ -198,7 +198,7 @@ async function telaExercicio(el, { id }) {
 
   el.innerHTML = `
     ${fotoDe(ex) ? `
-    <div class="foto-exercicio">
+    <div class="foto-exercicio ${fotoDe(ex).desenho ? 'desenho' : ''}">
       <img src="${esc(fotoDe(ex).grande)}" alt="${esc(ex.nome)}" onerror="this.src='${esc(fotoDe(ex).mini)}'">
       ${fotoDe(ex).grande2 ? `<img src="${esc(fotoDe(ex).grande2)}" alt="" onerror="this.remove()">` : ''}
     </div>` : ''}
