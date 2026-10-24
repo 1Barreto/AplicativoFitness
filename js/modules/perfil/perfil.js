@@ -147,7 +147,7 @@ async function telaPerfil(el) {
     const media = valores.reduce((a, b) => a + b, 0) / valores.length;
     el.querySelector('[data-media]').textContent = `Média: ${fmt(media)} por semana`;
     const cor = getComputedStyle(document.documentElement).getPropertyValue('--destaque').trim();
-    const corSuave = cor + '99';
+    const corSuave = '#2a6b5c'; // semanas anteriores mais apagadas; a atual em destaque
     await trocar('estat', () => criarGrafico(el.querySelector('[data-g=estat]'), {
       tipo: 'bar',
       rotulos: semanas.map(s => s.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '')),

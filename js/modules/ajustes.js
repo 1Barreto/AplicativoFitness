@@ -11,7 +11,7 @@ import { exportarBackup, importarBackup } from '../core/backup.js';
 import { prefs } from './treino/dados.js';
 import { importarHevy } from './treino/importar-hevy.js';
 
-const VERSAO_APP = '1.0.0';
+const VERSAO_APP = '1.1.0';
 
 async function telaAjustes(el) {
   definirTitulo('Ajustes');

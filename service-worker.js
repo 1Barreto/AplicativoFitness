@@ -8,7 +8,7 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v6';
+const VERSAO = 'v7';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
 
@@ -81,14 +81,14 @@ self.addEventListener('fetch', (event) => {
   // API do Supabase: nunca usar cache
   if (url.hostname.endsWith('.supabase.co') || url.hostname.endsWith('.supabase.in')) return;
 
-  // Bibliotecas do CDN: cache primeiro
-  if (url.hostname === 'cdn.jsdelivr.net') {
+  // Bibliotecas do CDN e fontes: cache primeiro
+  if (url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_CDN);
       const emCache = await cache.match(req);
       if (emCache) return emCache;
       const resp = await fetch(req);
-      if (resp.ok) cache.put(req, resp.clone());
+      if (resp.ok || resp.type === 'opaque') cache.put(req, resp.clone());
       return resp;
     })());
     return;
