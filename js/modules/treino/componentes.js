@@ -2,6 +2,7 @@
 
 import { folha, toast, Icone } from '../../core/ui.js';
 import { esc, num } from '../../core/util.js';
+import { avatarExercicio } from './fotos.js';
 import {
   listarExercicios, filtrarExercicios, salvarExercicio, GRUPOS, EQUIPAMENTOS, TIPOS_EXERCICIO, TIPOS_SERIE,
 } from './dados.js';
@@ -27,7 +28,7 @@ export function montarListaExercicios(el, { aoEscolher, selecionados = null, aoC
     const itens = filtrarExercicios(todos, filtro);
     lista.innerHTML = itens.length ? itens.map(e => `
       <button class="item-exercicio ${selecionados?.has(e.id) ? 'selecionado' : ''}" data-id="${e.id}">
-        <span class="avatar-ex">${esc(e.nome[0])}</span>
+        ${avatarExercicio(e)}
         <span class="item-texto"><strong>${esc(e.nome)}</strong><small>${esc(e.grupo)} · ${esc(e.equipamento)}${e.base ? '' : ' · personalizado'}</small></span>
         ${selecionados ? `<span class="marca">${Icone.check}</span>` : Icone.seta}
       </button>`).join('') : '<p class="sutil centro">Nenhum exercício encontrado.</p>';

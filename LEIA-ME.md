@@ -121,3 +121,7 @@ A sincronização, o backup, a tela Hoje (o cartão "Dieta em breve" some sozinh
 
 ## Ícones
 Os ícones em `icons/` já estão prontos (halter branco em fundo azul). Para trocar, gere PNGs nos mesmos tamanhos (192, 512, 180 e 32 px; o "maskable" com margem de ~20%) em um site como https://realfavicongenerator.net e substitua os arquivos mantendo os nomes.
+
+## Fotos dos exercícios
+
+As fotos vêm do [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (domínio público). As miniaturas ficam em `img/exercicios/` e a foto grande é carregada do GitHub ao abrir um exercício. Para trocar a foto de qualquer exercício, abra o exercício e toque em **Trocar foto** (dá para escolher outra do banco ou usar uma foto sua).

@@ -13,6 +13,7 @@ import {
   mapaDeExercicios, ultimasSeries, recordesExercicio, melhoresDeSeries, recordesBatidos, NOMES_RECORDE,
   TIPOS_SERIE, TIPOS_EXERCICIO, descansoDe, salvarTreino, obterRotina, salvarRotina, resumoTreino, prefs,
 } from './dados.js';
+import { avatarExercicio } from './fotos.js';
 import { escolherExercicios, escolherTipoSerie, rotulosSeries, escolherDescanso } from './componentes.js';
 
 const CHAVE = 'treinoAtivo';
@@ -134,7 +135,7 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
     return `
       <section class="cartao exercicio-sessao" data-ex="${i}">
         <div class="ex-topo">
-          <span class="ex-avatar" aria-hidden="true">${iniciais(ex.nome)}</span>
+          ${avatarExercicio(ex, 'ex-avatar')}
           <a class="ex-nome" href="#/treino/exercicio/${e.exercicio_id}">${esc(ex.nome)}</a>
           <button class="icon-btn" data-acao="menu-ex" aria-label="Opções do exercício">${Icone.pontos}</button>
         </div>
@@ -320,12 +321,6 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
 
   desenhar();
   return { atualizarResumo, desenhar };
-}
-
-// Iniciais do exercício para o avatar redondo ("Supino reto" -> "SR")
-function iniciais(nome = '') {
-  const palavras = nome.replace(/\(.*?\)/g, '').split(/\s+/).filter(p => p && !/^(de|da|do|com|na|no|e|em|a|o)$/i.test(p));
-  return esc(palavras.slice(0, 2).map(p => p[0].toUpperCase()).join('') || '?');
 }
 
 // ---------- Cronômetro de descanso ----------

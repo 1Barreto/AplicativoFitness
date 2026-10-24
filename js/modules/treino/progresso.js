@@ -4,6 +4,7 @@ import { Modulos } from '../../core/modulos.js';
 import { esc, fmtKg, fmtVolume, fmtData, inicioDaSemana } from '../../core/util.js';
 import { Icone, definirTitulo, vazio } from '../../core/ui.js';
 import { criarGrafico } from '../../core/graficos.js';
+import { avatarExercicio } from './fotos.js';
 import { listarTreinos, mapaDeExercicios, resumoTreino, mapaDeRecordes, melhoresDeSeries, NOMES_RECORDE } from './dados.js';
 
 async function telaProgresso(el) {
@@ -69,7 +70,7 @@ async function telaProgresso(el) {
     <h2 class="secao">Melhores marcas por exercício</h2>
     <div class="cartao lista-simples">${melhores.map(x => `
       <a href="#/treino/exercicio/${x.id}" class="linha-lista">
-        <span class="avatar-ex">${esc(x.ex.nome[0])}</span>
+        ${avatarExercicio(x.ex)}
         <span class="item-texto"><strong>${esc(x.ex.nome)}</strong><small>Carga ${fmtKg(x.m.carga)} · 1RM est. ${fmtKg(Math.round(x.m.e1rm * 10) / 10)}</small></span>
         ${Icone.seta}
       </a>`).join('') || '<p class="sutil">Nenhum exercício com carga registrada.</p>'}</div>

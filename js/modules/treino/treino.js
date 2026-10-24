@@ -5,11 +5,12 @@ import { esc, num, fmtNum, fmtKg, fmtData, fmtRelativo, fmtVolume, fmtDuracao, e
 import { Icone, definirTitulo, toast, confirmar, menu, vazio } from '../../core/ui.js';
 import { criarGrafico } from '../../core/graficos.js';
 import {
-  T, listarRotinas, obterRotina, salvarRotina, excluirRotina, mapaDeExercicios, obterExercicio, excluirExercicio,
+  T, listarRotinas, obterRotina, salvarRotina, excluirRotina, mapaDeExercicios, obterExercicio, excluirExercicio, salvarExercicio,
   historicoExercicio, melhoresDeSeries, TIPOS_SERIE, TIPOS_EXERCICIO, descansoDe, listarTreinos, resumoTreino, proximaRotina,
 } from './dados.js';
 import { montarListaExercicios, escolherExercicios, formularioExercicio, escolherTipoSerie, rotulosSeries, escolherDescanso } from './componentes.js';
 import { iniciarTreino, obterAtivo } from './sessao.js';
+import { avatarExercicio, fotoDe, escolherFoto } from './fotos.js';
 
 // ---------- Lista de rotinas ----------
 async function telaTreino(el) {
@@ -96,6 +97,7 @@ async function telaRotina(el, { id }) {
       return `
       <section class="cartao exercicio-sessao" data-ex="${i}">
         <div class="ex-topo">
+          ${avatarExercicio(ex, 'ex-avatar')}
           <strong class="ex-nome">${esc(ex.nome)}</strong>
           <button class="icon-btn" data-acao="menu-ex">${Icone.pontos}</button>
         </div>
@@ -195,14 +197,20 @@ async function telaExercicio(el, { id }) {
   const [c1, c2] = TIPOS_EXERCICIO[ex.tipo || 'peso_reps'].campos;
 
   el.innerHTML = `
+    ${fotoDe(ex) ? `
+    <div class="foto-exercicio">
+      <img src="${esc(fotoDe(ex).grande)}" alt="${esc(ex.nome)}" onerror="this.src='${esc(fotoDe(ex).mini)}'">
+      ${fotoDe(ex).grande2 ? `<img src="${esc(fotoDe(ex).grande2)}" alt="" onerror="this.remove()">` : ''}
+    </div>` : ''}
     <div class="cartao">
       <div class="ex-cab">
-        <span class="avatar-ex grande">${esc(ex.nome[0])}</span>
+        ${avatarExercicio(ex, 'grande')}
         <div><h2>${esc(ex.nome)}</h2><p class="sutil">${esc(ex.grupo)} · ${esc(ex.equipamento)}${ex.base ? '' : ' · personalizado'}</p></div>
       </div>
       <p class="sutil">Descanso: ${descansoDe(ex) ? `${descansoDe(ex)} s` : 'desligado'}${ex.notas ? ` · ${esc(ex.notas)}` : ''}</p>
       <div class="linha-botoes">
         <button class="btn btn-secundario" data-acao="editar">${Icone.editar}<span>Editar</span></button>
+        ${!ex.removido ? `<button class="btn btn-secundario" data-acao="foto">${Icone.camera}<span>${fotoDe(ex) ? 'Trocar foto' : 'Adicionar foto'}</span></button>` : ''}
         ${!ex.base && !ex.removido ? `<button class="btn btn-secundario perigo" data-acao="excluir">${Icone.lixo}<span>Excluir</span></button>` : ''}
       </div>
     </div>
@@ -231,6 +239,13 @@ async function telaExercicio(el, { id }) {
   `;
 
   el.querySelector('[data-acao=editar]').onclick = async () => { if (await formularioExercicio(ex)) telaExercicio(el, { id }); };
+  el.querySelector('[data-acao=foto]')?.addEventListener('click', async () => {
+    const foto = await escolherFoto(ex);
+    if (foto === undefined) return;
+    await salvarExercicio({ ...ex, foto });
+    toast('Foto atualizada', 'sucesso');
+    telaExercicio(el, { id });
+  });
   el.querySelector('[data-acao=excluir]')?.addEventListener('click', async () => {
     if (await confirmar('Excluir este exercício? Ele continuará aparecendo nos treinos antigos.', { ok: 'Excluir', perigo: true })) {
       await excluirExercicio(id); toast('Exercício excluído'); location.hash = '#/treino/exercicios';

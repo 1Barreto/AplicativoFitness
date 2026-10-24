@@ -8,9 +8,10 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v10';
+const VERSAO = 'v11';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
+const CACHE_FOTOS = 'fotos-v1'; // fotos dos exercícios (não mudam)
 
 const ARQUIVOS = [
   './',
@@ -39,6 +40,8 @@ const ARQUIVOS = [
   './js/modules/treino/historico.js',
   './js/modules/treino/progresso.js',
   './js/modules/treino/importar-hevy.js',
+  './js/modules/treino/fotos.js',
+  './js/modules/treino/fotos-banco.js',
   './js/modules/corpo/dados.js',
   './js/modules/corpo/corpo.js',
   './js/modules/perfil/perfil.js',
@@ -81,10 +84,11 @@ self.addEventListener('fetch', (event) => {
   // API do Supabase: nunca usar cache
   if (url.hostname.endsWith('.supabase.co') || url.hostname.endsWith('.supabase.in')) return;
 
-  // Bibliotecas do CDN e fontes: cache primeiro
-  if (url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+  // Bibliotecas do CDN, fontes e fotos dos exercícios: cache primeiro
+  const foto = url.hostname === 'raw.githubusercontent.com' || (url.origin === self.location.origin && url.pathname.includes('/img/exercicios/'));
+  if (foto || url.hostname === 'cdn.jsdelivr.net' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith((async () => {
-      const cache = await caches.open(CACHE_CDN);
+      const cache = await caches.open(foto ? CACHE_FOTOS : CACHE_CDN);
       const emCache = await cache.match(req);
       if (emCache) return emCache;
       const resp = await fetch(req);

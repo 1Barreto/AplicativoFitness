@@ -59,7 +59,7 @@ export async function salvarExercicio(ex) {
   if (base) {
     // Exercício da biblioteca: só guardamos os ajustes pessoais
     const atual = await DB.obter(T.EXERCICIOS, ex.id);
-    return DB.salvar(T.EXERCICIOS, { ...(atual || {}), id: ex.id, descanso: ex.descanso ?? null, notas: ex.notas || '' });
+    return DB.salvar(T.EXERCICIOS, { ...(atual || {}), id: ex.id, descanso: ex.descanso ?? null, notas: ex.notas || '', ...(ex.foto !== undefined ? { foto: ex.foto } : {}) });
   }
   return DB.salvar(T.EXERCICIOS, { ...dados, personalizado: true });
 }
