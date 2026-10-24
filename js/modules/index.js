@@ -11,4 +11,5 @@ import './treino/sessao.js';
 import './treino/historico.js';
 import './treino/progresso.js';
 import './corpo/corpo.js';
+import './perfil/perfil.js';
 import './ajustes.js';

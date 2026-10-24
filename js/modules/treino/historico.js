@@ -11,7 +11,7 @@ import { rotulosSeries } from './componentes.js';
 import { montarEditor, iniciarTreino } from './sessao.js';
 
 async function telaLista(el) {
-  definirTitulo('Histórico');
+  definirTitulo('Histórico', { voltar: '#/perfil' });
   const [treinos, mapa, recordes] = await Promise.all([listarTreinos(), mapaDeExercicios(), mapaDeRecordes()]);
   if (!treinos.length) {
     el.innerHTML = vazio(Icone.historico, 'Nenhum treino ainda', 'Os treinos finalizados aparecem aqui.', '<a class="btn btn-primario" href="#/treino">Ir para Treino</a>');
@@ -138,7 +138,6 @@ async function telaEditar(el, { id }) {
 
 Modulos.registrar({
   id: 'historico',
-  aba: { rota: '/historico', nome: 'Histórico', icone: Icone.historico, ordem: 30 },
   rotas: {
     '/historico': telaLista,
     '/historico/:id': telaDetalhe,

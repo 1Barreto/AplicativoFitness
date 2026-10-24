@@ -40,7 +40,7 @@ function formularioMedida(m = null) {
 }
 
 async function telaCorpo(el, _p, query) {
-  definirTitulo('Corpo');
+  definirTitulo('Corpo', { voltar: '#/perfil' });
   const medidas = await listarMedidas();
   const campoAtual = query.campo && rotulo[query.campo] ? query.campo : 'peso';
   const camposComDados = CAMPOS_MEDIDA.filter(([k]) => medidas.some(m => m[k] !== null && m[k] !== undefined));
@@ -126,7 +126,6 @@ async function cartaoPeso(el) {
 
 Modulos.registrar({
   id: 'corpo',
-  aba: { rota: '/corpo', nome: 'Corpo', icone: Icone.balanca, ordem: 50 },
   tabelas: [TABELA_MEDIDAS],
   rotas: { '/corpo': telaCorpo },
   cartoesHoje: [{ ordem: 30, render: cartaoPeso }],

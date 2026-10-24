@@ -12,7 +12,8 @@ export const Modulos = {
   /**
    * @param {object} m
    * @param {string} m.id
-   * @param {{rota:string, nome:string, icone:string, ordem:number}} [m.aba]  aba na barra inferior
+   * @param {{rota:string, nome:string, icone:string, ordem:number, inclui?:string[]}} [m.aba]  aba na barra inferior
+   *        (inclui: outras rotas que também deixam esta aba destacada)
    * @param {string[]} [m.tabelas]   tabelas sincronizadas com o Supabase
    * @param {Object<string, Function|{view:Function, recarregar?:boolean}>} [m.rotas]
    * @param {{ordem:number, render:Function}[]} [m.cartoesHoje]

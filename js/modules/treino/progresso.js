@@ -7,7 +7,7 @@ import { criarGrafico } from '../../core/graficos.js';
 import { listarTreinos, mapaDeExercicios, resumoTreino, mapaDeRecordes, melhoresDeSeries, NOMES_RECORDE } from './dados.js';
 
 async function telaProgresso(el) {
-  definirTitulo('Progresso');
+  definirTitulo('Progresso', { voltar: '#/perfil' });
   const [treinos, mapa, recordes] = await Promise.all([listarTreinos(), mapaDeExercicios(), mapaDeRecordes()]);
   if (!treinos.length) {
     el.innerHTML = vazio(Icone.progresso, 'Sem dados ainda', 'Finalize alguns treinos para ver gráficos e recordes.');
@@ -82,6 +82,5 @@ async function telaProgresso(el) {
 
 Modulos.registrar({
   id: 'progresso',
-  aba: { rota: '/progresso', nome: 'Progresso', icone: Icone.progresso, ordem: 40 },
   rotas: { '/progresso': telaProgresso },
 });

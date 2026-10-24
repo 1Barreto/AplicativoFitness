@@ -30,8 +30,10 @@ async function renderizar({ preservarRolagem = false } = {}) {
   limpezaAtual = null;
   rotaAtual = rota;
 
+  const dentro = (r) => caminho === r || caminho.startsWith(r + '/');
   document.querySelectorAll('.tabbar a').forEach(a => {
-    a.classList.toggle('ativa', caminho === a.dataset.rota || caminho.startsWith(a.dataset.rota + '/'));
+    const rotas = [a.dataset.rota, ...(a.dataset.inclui ? a.dataset.inclui.split(',') : [])];
+    a.classList.toggle('ativa', rotas.some(dentro));
   });
   document.getElementById('btn-ajustes').classList.toggle('ativa', caminho.startsWith('/ajustes'));
   document.body.dataset.rota = caminho.split('/')[1] || '';
@@ -54,7 +56,7 @@ async function renderizar({ preservarRolagem = false } = {}) {
 
 function montarAbas() {
   document.getElementById('tabbar').innerHTML = Modulos.abas().map(a =>
-    `<a href="#${a.rota}" data-rota="${a.rota}">${a.icone}<span>${a.nome}</span></a>`).join('');
+    `<a href="#${a.rota}" data-rota="${a.rota}" data-inclui="${(a.inclui || []).join(',')}">${a.icone}<span>${a.nome}</span></a>`).join('');
   document.getElementById('btn-ajustes').innerHTML = Icone.ajustes;
   document.getElementById('btn-voltar').innerHTML = Icone.voltar;
 }
