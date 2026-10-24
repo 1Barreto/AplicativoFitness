@@ -26,6 +26,7 @@ export const Icone = {
   fechar: svg('<path d="M18 6 6 18M6 6l12 12"/>'),
   pontos: svg('<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>'),
   camera: svg('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
+  medidor: svg('<path d="M4 17a8 8 0 1 1 16 0"/><path d="m12 15 3.5-4.5"/><circle cx="12" cy="15.5" r="1.6"/>'),
   play: svg('<path d="M7 4v16l13-8z"/>'),
   nuvem: svg('<path d="M17.5 19H7a5 5 0 1 1 .9-9.9A6 6 0 0 1 19 10.5a4.3 4.3 0 0 1-1.5 8.5z"/>'),
   sincronizar: svg('<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/>'),

@@ -14,7 +14,7 @@ import {
   TIPOS_SERIE, TIPOS_EXERCICIO, descansoDe, salvarTreino, obterRotina, salvarRotina, resumoTreino, prefs,
 } from './dados.js';
 import { avatarExercicio } from './fotos.js';
-import { escolherExercicios, escolherTipoSerie, rotulosSeries, escolherDescanso } from './componentes.js';
+import { escolherExercicios, escolherTipoSerie, rotulosSeries, escolherDescanso, escolherRir, fmtRir } from './componentes.js';
 
 const CHAVE = 'treinoAtivo';
 const CHAVE_DESCANSO = 'descansoAtivo';
@@ -145,7 +145,7 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
         </div>
         ${e.notas || notasAbertas.has(e.uid) ? `<input class="campo campo-nota" data-campo="notas-ex" placeholder="Adicionar nota…" value="${esc(e.notas || '')}">` : ''}
         <div class="tabela-series">
-          <div class="serie-cab"><span>Série</span><span>Anterior</span><span>${c1}</span><span>${c2}</span><span>${Icone.check}</span></div>
+          <div class="serie-cab"><span>Série</span><span>Anterior</span><span>${c1}</span><span>${c2}</span><span>RIR</span><span>${Icone.check}</span></div>
           ${e.series.map((s, j) => {
             const a = ant[j];
             const tipo = TIPOS_SERIE[s.tipo] || TIPOS_SERIE.N;
@@ -155,6 +155,7 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
               <button class="anterior" data-acao="copiar-ant" ${a ? '' : 'disabled'}>${a ? `${fmtNum(a.peso) || 0} × ${fmtNum(a.reps) || 0}` : '–'}</button>
               <input class="campo campo-serie" data-campo="peso" inputmode="decimal" enterkeyhint="next" placeholder="${a ? fmtNum(a.peso) : c1}" value="${fmtNum(s.peso)}">
               <input class="campo campo-serie" data-campo="reps" inputmode="decimal" enterkeyhint="done" placeholder="${a ? fmtNum(a.reps) : c2}" value="${fmtNum(s.reps)}">
+              <button class="btn-rir ${s.rir !== null && s.rir !== undefined ? 'com-valor' : ''}" data-acao="rir" aria-label="RIR">${fmtRir(s.rir) || Icone.medidor}</button>
               <button class="btn-check" data-acao="feita" aria-label="Concluir série">${Icone.check}</button>
               ${s.recordes?.length ? `<span class="selo-recorde" title="${s.recordes.map(r => NOMES_RECORDE[r]).join(', ')}">${Icone.trofeu}</span>` : ''}
             </div>`;
@@ -286,6 +287,11 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
         }
         if (modo === 'ativo' && e.descanso > 0) iniciarDescanso(e.descanso, mapa.get(e.exercicio_id)?.nome);
       } else { s.feita = false; s.recordes = []; }
+      mudou(); desenhar();
+    } else if (acao === 'rir') {
+      const v = await escolherRir(e.series[j].rir);
+      if (v === undefined) return;
+      e.series[j].rir = v;
       mudou(); desenhar();
     } else if (acao === 'nota-ex') {
       if (notasAbertas.has(e.uid) && !e.notas) notasAbertas.delete(e.uid); else notasAbertas.add(e.uid);

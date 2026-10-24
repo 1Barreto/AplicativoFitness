@@ -10,6 +10,7 @@ import { som } from '../core/som.js';
 import { exportarBackup, importarBackup } from '../core/backup.js';
 import { prefs } from './treino/dados.js';
 import { importarHevy } from './treino/importar-hevy.js';
+import { escolherDescanso } from './treino/componentes.js';
 
 const VERSAO_APP = '1.2.0';
 
@@ -26,12 +27,10 @@ async function telaAjustes(el) {
 
     <h2 class="secao">Treino</h2>
     <div class="cartao lista-simples">
-      <label class="linha-lista">
+      <button class="linha-lista" data-pref="descanso">
         <span class="item-texto"><strong>Descanso padrão</strong><small>Usado quando o exercício não tem tempo próprio</small></span>
-        <select class="campo campo-mini" data-pref="descanso">
-          ${[0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300].map(s => `<option value="${s}" ${s === descanso ? 'selected' : ''}>${s === 0 ? 'Desligado' : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`}</option>`).join('')}
-        </select>
-      </label>
+        <span class="sutil" data-valor>${descanso ? `${Math.floor(descanso / 60)}:${String(descanso % 60).padStart(2, '0')}` : 'Desligado'}</span>
+      </button>
       <label class="linha-lista">
         <span class="item-texto"><strong>Aviso sonoro</strong><small>Toca ao terminar o descanso e ao bater recorde</small></span>
         <input type="checkbox" class="interruptor" data-pref="som" ${som.ativo() ? 'checked' : ''}>
@@ -70,7 +69,13 @@ async function telaAjustes(el) {
 
   desenharConta(el.querySelector('[data-conta]'), { usuario, info, pendentes });
 
-  el.querySelector('[data-pref=descanso]').onchange = e => { prefs.definirDescansoPadrao(Number(e.target.value)); toast('Descanso padrão salvo'); };
+  el.querySelector('[data-pref=descanso]').onclick = async e => {
+    const seg = await escolherDescanso(prefs.descansoPadrao());
+    if (seg === undefined) return;
+    prefs.definirDescansoPadrao(seg);
+    el.querySelector('[data-pref=descanso] [data-valor]').textContent = seg ? `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}` : 'Desligado';
+    toast('Descanso padrão salvo');
+  };
   el.querySelector('[data-pref=som]').onchange = e => som.definirAtivo(e.target.checked);
   el.querySelector('[data-pref=tela]').onchange = e => prefs.definirManterTelaLigada(e.target.checked);
   el.querySelector('[data-acao=testar-som]').onclick = () => { som.desbloquear(); const a = som.ativo(); som.definirAtivo(true); som.fimDescanso(); som.definirAtivo(a); };

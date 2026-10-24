@@ -805,7 +805,7 @@ body.modo-sessao .topbar { display: none; }
 }
 .tela-sessao [data-editor], .tela-sessao [data-lista-ex], .tela [data-lista-ex] { display: flex; flex-direction: column; gap: 12px; }
 @media (min-width: 900px) {
-  .exercicio-sessao .serie-cab, .exercicio-sessao .serie-linha { grid-template-columns: 48px minmax(80px, 1fr) 120px 120px 52px; }
+  .tabela-series:not(.tabela-rotina) .serie-cab, .tabela-series:not(.tabela-rotina) .serie-linha { grid-template-columns: 48px minmax(80px, 1fr) 120px 120px 64px 52px; }
 }
 
 /* ---------- Fotos dos exercícios ---------- */
@@ -826,3 +826,29 @@ body.modo-sessao .topbar { display: none; }
 .foto-exercicio.desenho img { aspect-ratio: 1; object-fit: contain; background: #fff; padding: 8px; }
 @media (max-width: 600px) { .foto-exercicio.desenho { grid-template-columns: 1fr 1fr; } .foto-exercicio.desenho img + img { display: block; } }
 .foto-opcao.desenho img { background: #fff; object-fit: contain; padding: 4px; }
+
+/* ---------- RIR e tempo de descanso ---------- */
+.tabela-series:not(.tabela-rotina) .serie-cab, .tabela-series:not(.tabela-rotina) .serie-linha {
+  grid-template-columns: 30px minmax(40px, 1fr) minmax(50px, 66px) minmax(50px, 66px) 40px 40px; gap: 5px;
+}
+.tabela-series:not(.tabela-rotina) .anterior { font-size: 13px; }
+.btn-rir {
+  height: 36px; border-radius: 8px; border: 1px solid var(--borda); background: var(--vidro); color: var(--texto-2);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 700; font-size: 15px; padding: 0;
+}
+.btn-rir svg { width: 20px; height: 20px; }
+.btn-rir.com-valor { color: var(--destaque); border-color: rgba(46, 230, 182, .4); background: rgba(46, 230, 182, .08); }
+.feita .btn-rir { background: transparent; }
+.campos-tempo { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 4px 0 6px; }
+.campos-tempo label { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--texto-2); font-size: 13px; }
+.campos-tempo .campo { width: 96px; text-align: center; font-size: 28px; font-weight: 700; min-height: 64px; }
+.dois-pontos { font-size: 28px; font-weight: 700; padding-bottom: 20px; }
+@media (min-width: 900px) {
+  .tabela-series:not(.tabela-rotina) .serie-cab, .tabela-series:not(.tabela-rotina) .serie-linha { grid-template-columns: 48px minmax(80px, 1fr) 120px 120px 64px 52px; gap: 6px; }
+}
+@media (max-width: 899px) {
+  .tabela-series:not(.tabela-rotina) .serie-cab, .tabela-series:not(.tabela-rotina) .serie-linha { grid-template-columns: 36px minmax(36px, 1fr) minmax(50px, 64px) minmax(50px, 64px) 40px 40px; }
+  .exercicio-sessao .serie-cab { font-size: 11px; letter-spacing: 0; }
+}
+.campos-tempo input::-webkit-outer-spin-button, .campos-tempo input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.campos-tempo input { -moz-appearance: textfield; }

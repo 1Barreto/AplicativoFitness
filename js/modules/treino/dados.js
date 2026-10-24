@@ -26,7 +26,7 @@ export const TIPOS_SERIE = {
 
 // ---------- Preferências locais ----------
 export const prefs = {
-  descansoPadrao: () => Number(localStorage.getItem('descansoPadrao') ?? 90),
+  descansoPadrao: () => Number(localStorage.getItem('descansoPadrao') ?? 0),
   definirDescansoPadrao: s => localStorage.setItem('descansoPadrao', String(s)),
   manterTelaLigada: () => localStorage.getItem('manterTela') !== '0',
   definirManterTelaLigada: v => localStorage.setItem('manterTela', v ? '1' : '0'),

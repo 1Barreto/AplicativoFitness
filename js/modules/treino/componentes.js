@@ -140,15 +140,47 @@ export function rotulosSeries(series) {
   return series.map(s => (s.tipo === 'N' || !s.tipo ? String(++n) : TIPOS_SERIE[s.tipo].curto));
 }
 
-// Campo de tempo de descanso (seletor rápido)
+// Tempo de descanso: o usuário digita minutos e segundos (0 = desligado).
+// Resolve com os segundos, ou undefined se cancelar.
 export function escolherDescanso(atualSeg) {
-  const opcoes = [0, 30, 45, 60, 75, 90, 120, 150, 180, 240, 300];
+  const seg = Number(atualSeg) || 0;
   return folha({
     titulo: 'Tempo de descanso', classe: 'modal-pequeno',
     conteudo: (corpo, fechar) => {
-      corpo.innerHTML = `<div class="grade-opcoes">${opcoes.map(o =>
-        `<button class="chip ${o === atualSeg ? 'ativo' : ''}" data-v="${o}">${o === 0 ? 'Desligado' : o < 60 ? `${o} s` : `${Math.floor(o / 60)}:${String(o % 60).padStart(2, '0')}`}</button>`).join('')}</div>`;
-      corpo.querySelectorAll('[data-v]').forEach(b => b.onclick = () => fechar(Number(b.dataset.v)));
+      corpo.innerHTML = `
+        <div class="campos-tempo">
+          <label><input class="campo" data-min type="number" inputmode="numeric" min="0" max="59" placeholder="0" value="${seg ? Math.floor(seg / 60) : ''}"><span>min</span></label>
+          <span class="dois-pontos">:</span>
+          <label><input class="campo" data-seg type="number" inputmode="numeric" min="0" max="59" placeholder="00" value="${seg ? String(seg % 60).padStart(2, '0') : ''}"><span>seg</span></label>
+        </div>
+        <div class="linha-botoes">
+          <button class="btn btn-secundario" data-desligar>Desligar</button>
+          <button class="btn btn-primario" data-salvar>Salvar</button>
+        </div>`;
+      const min = corpo.querySelector('[data-min]'), s = corpo.querySelector('[data-seg]');
+      const salvar = () => fechar(Math.max(0, Math.round((num(min.value) || 0) * 60 + (num(s.value) || 0))));
+      corpo.querySelector('[data-desligar]').onclick = () => fechar(0);
+      corpo.querySelector('[data-salvar]').onclick = salvar;
+      [min, s].forEach(c => c.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvar(); } }));
+      setTimeout(() => min.focus(), 50);
     },
   });
 }
+
+// RIR (repetições em reserva) de uma série. Resolve com o número, null para limpar ou undefined.
+export function escolherRir(atual) {
+  return folha({
+    titulo: 'RIR (repetições em reserva)', classe: 'modal-pequeno',
+    conteudo: (corpo, fechar) => {
+      corpo.innerHTML = `
+        <p class="sutil" style="margin-top:0">Quantas repetições ainda daria para fazer?</p>
+        <div class="grade-opcoes">${[0, 1, 2, 3, 4, 5].map(v =>
+          `<button class="chip ${v === atual ? 'ativo' : ''}" data-v="${v}"><strong>${v === 5 ? '5+' : v}</strong>${v === 0 ? ' falha' : ''}</button>`).join('')}</div>
+        ${atual !== null && atual !== undefined ? '<button class="btn btn-secundario btn-bloco" data-limpar style="margin-top:10px">Limpar</button>' : ''}`;
+      corpo.querySelectorAll('[data-v]').forEach(b => b.onclick = () => fechar(Number(b.dataset.v)));
+      corpo.querySelector('[data-limpar]')?.addEventListener('click', () => fechar(null));
+    },
+  });
+}
+
+export const fmtRir = v => (v === null || v === undefined ? '' : v >= 5 ? '5+' : String(v));
