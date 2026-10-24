@@ -753,3 +753,57 @@ code { background: var(--vidro-forte); }
 .slot-cartao > * { flex: 1; }
 .slot-cartao > .grade-2 > .cartao { height: 100%; }
 .cartao-futuro { border-color: rgba(255, 255, 255, .16); }
+
+/* ---------- Tela de treino (layout estilo "Log Workout") ---------- */
+body.modo-sessao .topbar { display: none; }
+.sessao-topo {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 10px;
+  margin: -16px -16px 4px; padding: calc(10px + var(--seg-topo)) 16px 10px;
+  background: color-mix(in srgb, var(--fundo) 80%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--borda);
+}
+.sessao-topo h1 { flex: 1; font-size: 19px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sessao-topo .icon-btn { background: var(--vidro); border: 1px solid var(--borda); color: var(--texto); }
+.sessao-topo .btn-pequeno { padding: 0 18px; border-radius: 12px; }
+.btn-cronometro { width: auto; min-width: 40px; border-radius: 999px; gap: 4px; padding: 0 9px; }
+.btn-cronometro span { font-size: 14px; font-weight: 700; color: var(--destaque); font-variant-numeric: tabular-nums; }
+.btn-cronometro span:empty { display: none; }
+
+.sessao-resumo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 6px 2px 10px; }
+.sessao-resumo div { display: flex; flex-direction: column; gap: 2px; }
+.sessao-resumo small { font-size: 13px; color: var(--texto-2); }
+.sessao-resumo strong { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sessao-resumo .resumo-duracao strong { color: var(--destaque); text-shadow: 0 0 14px rgba(46, 230, 182, .35); }
+
+.exercicio-sessao .ex-topo { justify-content: flex-start; gap: 12px; }
+.exercicio-sessao .ex-nome { flex: 1; min-width: 0; color: var(--destaque); font-size: 17px; }
+.ex-avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; letter-spacing: .02em; color: var(--destaque);
+  background: linear-gradient(135deg, rgba(46, 230, 182, .25), rgba(46, 230, 182, .05));
+  border: 1px solid rgba(46, 230, 182, .35);
+}
+.ex-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 2px; }
+.ex-acoes .chip { margin: 0; padding: 6px 12px; font-size: 13px; font-weight: 600; }
+.chip-descanso.desligado { color: var(--texto-2); background: var(--vidro); border-color: var(--borda); }
+.chip-nota { color: var(--texto-2); }
+.exercicio-sessao .campo-nota { margin-top: 6px; padding: 8px 10px; background: var(--vidro); border-color: var(--borda); }
+
+.exercicio-sessao .tabela-series { margin-top: 10px; }
+.exercicio-sessao .serie-cab { letter-spacing: .04em; }
+.exercicio-sessao .campo-serie { border: 1px solid var(--borda); background: rgba(255, 255, 255, .03); }
+.exercicio-sessao .feita .campo-serie { border-color: transparent; background: transparent; }
+.exercicio-sessao .tipo-serie { background: transparent; border-color: transparent; }
+.exercicio-sessao [data-acao=add-serie] { min-height: 40px; }
+
+.tela-sessao > .perigo { margin-top: 4px; background: rgba(255, 92, 122, .08); border-color: rgba(255, 92, 122, .3); }
+@media (min-width: 900px) {
+  .sessao-topo { margin: -16px -32px 4px -16px; padding: 18px 32px 14px 16px; background: color-mix(in srgb, var(--fundo) 85%, transparent); }
+}
+.tela-sessao [data-editor], .tela-sessao [data-lista-ex], .tela [data-lista-ex] { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 900px) {
+  .exercicio-sessao .serie-cab, .exercicio-sessao .serie-linha { grid-template-columns: 48px minmax(80px, 1fr) 120px 120px 52px; }
+}

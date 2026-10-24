@@ -122,6 +122,8 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
 
   const mudou = () => { aoMudar(); atualizarResumo(); };
 
+  const notasAbertas = new Set(); // exercícios com o campo de nota aberto
+
   function camposDe(exId) { return TIPOS_EXERCICIO[mapa.get(exId)?.tipo || 'peso_reps'].campos; }
 
   function htmlExercicio(e, i) {
@@ -132,11 +134,15 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
     return `
       <section class="cartao exercicio-sessao" data-ex="${i}">
         <div class="ex-topo">
+          <span class="ex-avatar" aria-hidden="true">${iniciais(ex.nome)}</span>
           <a class="ex-nome" href="#/treino/exercicio/${e.exercicio_id}">${esc(ex.nome)}</a>
           <button class="icon-btn" data-acao="menu-ex" aria-label="Opções do exercício">${Icone.pontos}</button>
         </div>
-        <input class="campo campo-nota" data-campo="notas-ex" placeholder="Adicionar nota…" value="${esc(e.notas || '')}">
-        ${modo === 'ativo' ? `<button class="chip chip-descanso" data-acao="descanso-ex">${Icone.timer}<span>Descanso: ${e.descanso ? fmtSeg(e.descanso) : 'desligado'}</span></button>` : ''}
+        <div class="ex-acoes">
+          ${modo === 'ativo' ? `<button class="chip chip-descanso ${e.descanso ? '' : 'desligado'}" data-acao="descanso-ex">${Icone.timer}<span>Descanso: ${e.descanso ? fmtSeg(e.descanso) : 'OFF'}</span></button>` : ''}
+          <button class="chip chip-nota ${e.notas || notasAbertas.has(e.uid) ? 'ativo' : ''}" data-acao="nota-ex">${Icone.editar}<span>Nota</span></button>
+        </div>
+        ${e.notas || notasAbertas.has(e.uid) ? `<input class="campo campo-nota" data-campo="notas-ex" placeholder="Adicionar nota…" value="${esc(e.notas || '')}">` : ''}
         <div class="tabela-series">
           <div class="serie-cab"><span>Série</span><span>Anterior</span><span>${c1}</span><span>${c2}</span><span>${Icone.check}</span></div>
           ${e.series.map((s, j) => {
@@ -161,10 +167,7 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
     const rolagem = window.scrollY;
     el.innerHTML = `
       ${modo === 'ativo' ? `
-        <div class="sessao-cab cartao">
-          <input class="campo campo-titulo" data-campo="nome" value="${esc(estado.nome)}" aria-label="Nome do treino">
-          <div class="estatisticas" data-resumo></div>
-        </div>` : `
+        <div class="sessao-resumo" data-resumo></div>` : `
         <div class="cartao form">
           <label>Nome<input class="campo" data-campo="nome" value="${esc(estado.nome)}"></label>
           <div class="linha-2">
@@ -176,7 +179,10 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
       <div data-lista-ex>${estado.exercicios.map(htmlExercicio).join('')}</div>
       ${!estado.exercicios.length ? `<p class="sutil centro">Adicione o primeiro exercício para começar.</p>` : ''}
       <button class="btn btn-primario btn-bloco" data-acao="add-ex">${Icone.mais}<span>Adicionar exercício</span></button>
-      <label class="cartao form"><span class="rotulo">Notas do treino</span><textarea class="campo" data-campo="notas" rows="2" placeholder="Como foi o treino?">${esc(estado.notas || '')}</textarea></label>
+      <div class="cartao form">
+        ${modo === 'ativo' ? `<label>Nome do treino<input class="campo" data-campo="nome" value="${esc(estado.nome)}"></label>` : ''}
+        <label>Notas do treino<textarea class="campo" data-campo="notas" rows="2" placeholder="Como foi o treino?">${esc(estado.notas || '')}</textarea></label>
+      </div>
     `;
     atualizarResumo();
     window.scrollTo(0, rolagem);
@@ -187,7 +193,7 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
     const fim = modo === 'ativo' ? new Date().toISOString() : estado.fim;
     const r = resumoTreino({ ...estado, fim }, mapa);
     alvo.innerHTML = `
-      <div><small>Duração</small><strong data-duracao>${fmtDuracao(r.duracao, modo === 'ativo')}</strong></div>
+      <div class="resumo-duracao"><small>Duração</small><strong data-duracao>${fmtDuracao(r.duracao, modo === 'ativo')}</strong></div>
       <div><small>Volume</small><strong>${fmtVolume(r.volume)}</strong></div>
       <div><small>Séries</small><strong>${r.series}</strong></div>`;
   }
@@ -280,6 +286,10 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
         if (modo === 'ativo' && e.descanso > 0) iniciarDescanso(e.descanso, mapa.get(e.exercicio_id)?.nome);
       } else { s.feita = false; s.recordes = []; }
       mudou(); desenhar();
+    } else if (acao === 'nota-ex') {
+      if (notasAbertas.has(e.uid) && !e.notas) notasAbertas.delete(e.uid); else notasAbertas.add(e.uid);
+      desenhar();
+      el.querySelector(`[data-ex="${i}"] .campo-nota`)?.focus();
     } else if (acao === 'descanso-ex') {
       const seg = await escolherDescanso(e.descanso);
       if (seg === undefined) return;
@@ -310,6 +320,12 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
 
   desenhar();
   return { atualizarResumo, desenhar };
+}
+
+// Iniciais do exercício para o avatar redondo ("Supino reto" -> "SR")
+function iniciais(nome = '') {
+  const palavras = nome.replace(/\(.*?\)/g, '').split(/\s+/).filter(p => p && !/^(de|da|do|com|na|no|e|em|a|o)$/i.test(p));
+  return esc(palavras.slice(0, 2).map(p => p[0].toUpperCase()).join('') || '?');
 }
 
 // ---------- Cronômetro de descanso ----------
@@ -419,25 +435,46 @@ function descartar() {
 async function telaAtiva(el) {
   const estado = obterAtivo();
   if (!estado) { location.replace('#/treino'); return; }
-  definirTitulo('Treino', { voltar: '#/treino' });
+  definirTitulo('Registrar treino', { voltar: '#/treino' });
+  document.body.classList.add('modo-sessao');
 
   el.classList.add('tela-sessao');
   el.innerHTML = `
-    <div class="acoes-topo">
-      <button class="btn btn-secundario" data-acao-topo="descartar">Descartar</button>
-      <button class="btn btn-sucesso" data-acao-topo="finalizar">${Icone.check}<span>Finalizar</span></button>
-    </div>
-    <div data-editor></div>`;
+    <header class="sessao-topo">
+      <button class="icon-btn" data-acao-topo="minimizar" aria-label="Minimizar treino">${Icone.baixo}</button>
+      <h1>Treino</h1>
+      <button class="icon-btn btn-cronometro" data-acao-topo="cronometro" aria-label="Cronômetro">${Icone.timer}<span data-cronometro></span></button>
+      <button class="btn btn-sucesso btn-pequeno" data-acao-topo="finalizar">Finalizar</button>
+    </header>
+    <div data-editor></div>
+    <button class="btn btn-bloco perigo" data-acao-topo="descartar">${Icone.lixo}<span>Descartar treino</span></button>`;
   await montarEditor(el.querySelector('[data-editor]'), estado, { modo: 'ativo', aoMudar: () => gravarAtivo(estado) });
+  el.querySelector('[data-acao-topo=minimizar]').onclick = () => { location.hash = '#/treino'; };
   el.querySelector('[data-acao-topo=finalizar]').onclick = () => finalizar(estado);
   el.querySelector('[data-acao-topo=descartar]').onclick = async () => {
     if (await confirmar('Descartar este treino? Os dados registrados serão perdidos.', { ok: 'Descartar', perigo: true })) descartar();
+  };
+  el.querySelector('[data-acao-topo=cronometro]').onclick = async () => {
+    if (obterDescanso()) {
+      const r = await menu('Cronômetro', [
+        { texto: 'Parar cronômetro', valor: 'parar', icone: Icone.fechar },
+        { texto: 'Novo cronômetro', valor: 'novo', icone: Icone.timer },
+      ]);
+      if (r === 'parar') { gravarDescanso(null); painel.desenhar(); }
+      if (r !== 'novo') return;
+    }
+    const seg = await escolherDescanso(90);
+    if (seg) { iniciarDescanso(seg, 'Cronômetro'); painel.desenhar(); }
   };
 
   const painel = montarPainelDescanso(el);
   const relogio = setInterval(() => {
     const d = el.querySelector('[data-duracao]');
     if (d) d.textContent = fmtDuracao(Date.now() - new Date(estado.inicio), true);
+    const c = el.querySelector('[data-cronometro]');
+    const desc = obterDescanso();
+    const resta = desc ? Math.ceil((desc.fim - Date.now()) / 1000) : 0;
+    if (c) c.textContent = resta > 0 ? fmtSeg(resta) : '';
     painel.desenhar();
   }, 1000);
 
@@ -450,6 +487,7 @@ async function telaAtiva(el) {
 
   return () => {
     clearInterval(relogio);
+    document.body.classList.remove('modo-sessao');
     painel.sair();
     liberarTela();
     document.removeEventListener('visibilitychange', aoVoltar);
