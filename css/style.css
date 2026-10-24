@@ -748,3 +748,8 @@ code { background: var(--vidro-forte); }
   .grade-stats { grid-template-columns: repeat(6, 1fr); }
   .content { padding-right: 24px; }
 }
+/* Cartões da tela Hoje com a mesma altura em cada linha */
+.slot-cartao { display: flex; flex-direction: column; }
+.slot-cartao > * { flex: 1; }
+.slot-cartao > .grade-2 > .cartao { height: 100%; }
+.cartao-futuro { border-color: rgba(255, 255, 255, .16); }
