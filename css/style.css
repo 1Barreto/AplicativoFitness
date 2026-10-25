@@ -1144,3 +1144,30 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 .secao-lista { display: flex; align-items: center; gap: 8px; padding: 12px 14px 6px; font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--texto-2); border-top: 1px solid var(--borda); }
 .secao-lista svg { width: 14px; height: 14px; }
 .secao-marcas .lista-vazia { padding: 14px 16px 18px; }
+
+/* Próxima refeição (tela Hoje) */
+.cartao-proxima { display: flex; flex-direction: column; gap: 10px; border: 1px solid rgba(var(--p-rgb), .3); background: linear-gradient(135deg, rgba(var(--p-rgb), .1), var(--cartao) 60%); }
+.hora-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; background: rgba(var(--p-rgb), .14); color: var(--p); font-family: var(--fonte-titulo); font-size: 14px; }
+.hora-pill svg { width: 15px; height: 15px; }
+.proxima-corpo { display: flex; flex-direction: column; gap: 12px; }
+.proxima-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.proxima-nome { font-family: var(--fonte-titulo); font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 0; display: flex; align-items: center; gap: 8px; }
+.proxima-nome svg { color: var(--p); }
+.proxima-info p b { color: var(--texto); }
+.proxima-ultima { margin-top: 6px; padding: 10px 12px; border-radius: 14px; background: #141416; }
+.proxima-ultima small { color: var(--texto-2); font-size: 12px; }
+.proxima-ultima ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.proxima-ultima li { display: flex; justify-content: space-between; gap: 10px; }
+.proxima-ultima li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proxima-ultima li b { font-weight: 600; color: var(--texto-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.proxima-acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.proxima-acoes .btn:only-child { grid-column: 1 / -1; }
+.campo-hora { font-size: 22px; text-align: center; margin-top: 8px; }
+@media (min-width: 900px) {
+  .proxima-corpo { flex-direction: row; align-items: flex-end; gap: 24px; }
+  .proxima-info { flex: 1; }
+  .proxima-ultima ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); column-gap: 24px; }
+  .proxima-acoes { grid-template-columns: 1fr; width: 260px; flex-shrink: 0; }
+}
+@media (min-width: 900px) { .grade-hoje > .slot-cartao:has(.cartao-proxima) { grid-column: span 2; } }
+@media (min-width: 1500px) { .grade-hoje > .slot-cartao:has(.cartao-proxima) { grid-column: span 3; } }

@@ -22,7 +22,7 @@ export const NUTRIENTES = [
 ];
 export const MACROS = [['p', 'Proteína'], ['c', 'Carboidratos'], ['g', 'Gorduras']];
 
-const REFEICOES_PADRAO = ['Café da manhã', 'Almoço', 'Lanche', 'Jantar', 'Ceia'];
+const REFEICOES_PADRAO = [['Café da manhã', '07:00'], ['Almoço', '12:00'], ['Lanche', '16:00'], ['Jantar', '19:30'], ['Ceia', '22:00']];
 
 // ---------- Configuração (refeições do dia e metas) ----------
 // Um registro só; se dois aparelhos criarem o seu antes de sincronizar,
@@ -31,11 +31,31 @@ export async function obterConfig() {
   const l = (await DB.todos(T.config)).sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
   if (l[0]) return l[0];
   return {
-    refeicoes: REFEICOES_PADRAO.map((nome, i) => ({ id: `r${i + 1}`, nome })),
+    refeicoes: REFEICOES_PADRAO.map(([nome, horario], i) => ({ id: `r${i + 1}`, nome, horario })),
     metas: { treino: {}, off: {} },
   };
 }
 export const salvarConfig = c => DB.salvar(T.config, c);
+
+// Próxima refeição de hoje: a primeira sem registro depois da última registrada.
+// Sem nada registrado ainda, usa o horário (a primeira que não passou há mais de 1h30).
+export function proximaRefeicao(refeicoes, itensHoje, agora = new Date()) {
+  const comItens = new Set(itensHoje.map(i => i.refeicao));
+  let ultima = -1;
+  refeicoes.forEach((r, i) => { if (comItens.has(r.id)) ultima = i; });
+  if (ultima >= 0) return refeicoes.slice(ultima + 1).find(r => !comItens.has(r.id)) || null;
+  const min = agora.getHours() * 60 + agora.getMinutes() - 90;
+  const emMin = h => { const [a, b] = String(h || '').split(':').map(Number); return Number.isFinite(a) ? a * 60 + (b || 0) : null; };
+  return refeicoes.find(r => emMin(r.horario) == null || emMin(r.horario) >= min) || refeicoes[refeicoes.length - 1] || null;
+}
+
+// Itens da última vez que essa refeição foi registrada (até 14 dias atrás)
+export async function ultimaVezDaRefeicao(refeicaoId, antesDe) {
+  const todos = (await DB.todos(T.diario)).filter(i => i.refeicao === refeicaoId && i.dia < antesDe && i.dia >= somarDias(antesDe, -14));
+  if (!todos.length) return null;
+  const dia = todos.reduce((m, i) => (i.dia > m ? i.dia : m), '');
+  return { dia, itens: todos.filter(i => i.dia === dia).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0)) };
+}
 
 // ---------- Metas: dia de treino x dia off ----------
 export const TIPOS_DIA = { treino: 'Dia de treino', off: 'Dia off' };

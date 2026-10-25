@@ -3,10 +3,10 @@
 
 import { Modulos } from '../../core/modulos.js';
 import { esc, fmtNum, clone } from '../../core/util.js';
-import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio } from '../../core/ui.js';
+import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio, folha } from '../../core/ui.js';
 import { pesoAtual } from '../corpo/dados.js';
 import {
-  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, salvarItem, excluirItem, novoItem,
+  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, proximaRefeicao, ultimaVezDaRefeicao, salvarItem, excluirItem, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
   copiaAlimento, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS,
 } from './dados.js';
@@ -301,7 +301,7 @@ async function telaRefeicoes(el) {
     <div class="cartao lista-simples">
       ${config.refeicoes.map((r, i) => `
         <div class="linha-lista linha-refeicao" data-i="${i}">
-          <span class="item-texto"><strong>${esc(r.nome)}</strong></span>
+          <span class="item-texto"><strong>${esc(r.nome)}</strong><small>${r.horario ? `por volta das ${esc(r.horario)}` : 'sem horário'}</small></span>
           <button class="icon-btn" data-mover="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir">${Icone.cima}</button>
           <button class="icon-btn" data-mover="1" ${i === config.refeicoes.length - 1 ? 'disabled' : ''} aria-label="Descer">${Icone.baixo}</button>
           <button class="icon-btn" data-acao="op" aria-label="Opções">${Icone.pontos}</button>
@@ -337,9 +337,21 @@ async function telaRefeicoes(el) {
     linha.querySelector('[data-acao=op]').onclick = async () => {
       const op = await menu(r.nome, [
         { texto: 'Renomear', valor: 'renomear', icone: Icone.editar },
+        { texto: 'Horário', valor: 'horario', icone: Icone.timer },
         ...(config.refeicoes.length > 1 ? [{ texto: 'Excluir', valor: 'excluir', icone: Icone.lixo, perigo: true }] : []),
       ]);
       if (op === 'renomear') { const nome = await pedirTexto('Renomear refeição', r.nome); if (nome) salvar(config.refeicoes.map(x => (x === r ? { ...x, nome } : x))); }
+      if (op === 'horario') {
+        const h = await folha({
+          titulo: `Horário · ${r.nome}`, classe: 'modal-pequeno',
+          conteudo: `<p class="sutil pequeno">Usado para saber qual é a próxima refeição na tela Hoje.</p><input class="campo campo-hora" type="time" id="hora-ref" value="${esc(r.horario || '')}">`,
+          acoes: [
+            { texto: 'Sem horário', classe: 'btn-secundario', valor: '' },
+            { texto: 'Salvar', classe: 'btn-primario', acao: c => c.querySelector('#hora-ref').value || '' },
+          ],
+        });
+        if (h !== undefined) salvar(config.refeicoes.map(x => (x === r ? { ...x, horario: h } : x)));
+      }
       if (op === 'excluir' && await confirmar(`Excluir "${esc(r.nome)}"? Itens já registrados nela aparecem em "Outros".`, { ok: 'Excluir', perigo: true })) salvar(config.refeicoes.filter(x => x !== r));
     };
   });
@@ -403,6 +415,55 @@ async function telaRefeicaoSalva(el, { id }) {
   desenhar();
 }
 
+// ---------- Cartão "Próxima refeição" (primeiro da tela Hoje) ----------
+async function cartaoProximaRefeicao(el) {
+  const hoje = hojeISO();
+  const [config, itens, tipos] = await Promise.all([obterConfig(), itensDoDia(hoje), tiposDosDias([hoje])]);
+  const prox = proximaRefeicao(config.refeicoes, itens);
+  const metas = metasDe(config)[tipos[hoje].tipo] || {};
+  const t = somar(itens);
+  const resta = metas.kcal ? metas.kcal - t.kcal : null;
+  const redesenhar = () => cartaoProximaRefeicao(el);
+
+  if (!prox) {
+    el.innerHTML = `
+      <a class="cartao cartao-proxima" href="#/dieta">
+        <div class="cartao-cab">${Icone.dieta}<h3>Próxima refeição</h3></div>
+        <p class="proxima-nome">Tudo registrado hoje ${Icone.check}</p>
+        <p class="sutil">${fmtKcal(t.kcal)} kcal${metas.kcal ? ` de ${fmtKcal(metas.kcal)}` : ''} · P ${fmtG(t.p)} · C ${fmtG(t.c)} · G ${fmtG(t.g)}</p>
+      </a>`;
+    return;
+  }
+  const ultima = await ultimaVezDaRefeicao(prox.id, hoje);
+  const tu = ultima ? somar(ultima.itens) : null;
+  el.innerHTML = `
+    <section class="cartao cartao-proxima">
+      <div class="cartao-cab">${Icone.dieta}<h3>Próxima refeição</h3>${prox.horario ? `<span class="link-cab hora-pill">${Icone.timer}${esc(prox.horario)}</span>` : ''}</div>
+      <div class="proxima-corpo">
+        <div class="proxima-info">
+          <p class="proxima-nome">${esc(prox.nome)}</p>
+          <p class="sutil pequeno">${resta == null ? `${fmtKcal(t.kcal)} kcal registradas hoje` : resta >= 0 ? `Faltam <b>${fmtKcal(resta)} kcal</b> para a meta de hoje` : `${fmtKcal(-resta)} kcal acima da meta de hoje`}</p>
+          ${ultima ? `
+            <div class="proxima-ultima">
+              <small>Última vez · ${rotuloDia(ultima.dia).toLowerCase()} · ${fmtKcal(tu.kcal)} kcal · P ${fmtG(tu.p)} · C ${fmtG(tu.c)} · G ${fmtG(tu.g)}</small>
+              <ul>${ultima.itens.slice(0, 5).map(i => `<li><span>${esc(i.alimento.nome.split(',').slice(0, 2).join(','))}</span><b>${fmtQtd(i)}</b></li>`).join('')}${ultima.itens.length > 5 ? `<li class="sutil">+ ${ultima.itens.length - 5} itens</li>` : ''}</ul>
+            </div>` : ''}
+        </div>
+        <div class="proxima-acoes">
+          ${ultima ? `<button class="btn btn-primario" data-acao="repetir">${Icone.copiar}<span>Repetir</span></button>` : ''}
+          <button class="btn ${ultima ? 'btn-secundario' : 'btn-primario'}" data-acao="add">${Icone.mais}<span>${ultima ? 'Adicionar' : 'Adicionar alimento'}</span></button>
+        </div>
+      </div>
+    </section>`;
+  el.querySelector('[data-acao=add]').onclick = async () => { if (await adicionarAlimentos({ dia: hoje, refeicao: prox })) redesenhar(); };
+  el.querySelector('[data-acao=repetir]')?.addEventListener('click', async () => {
+    let ordem = Date.now();
+    for (const i of ultima.itens) { const { id, created_at, updated_at, ...resto } = i; await salvarItem({ ...resto, dia: hoje, ordem: ordem++ }); }
+    toast(`Refeição registrada: ${esc(prox.nome)}`, 'sucesso');
+    redesenhar();
+  });
+}
+
 // ---------- Cartão na tela Hoje ----------
 async function cartaoDieta(el) {
   const [config, itens, tipos] = await Promise.all([obterConfig(), itensDoDia(hojeISO()), tiposDosDias([hojeISO()])]);
@@ -434,5 +495,5 @@ Modulos.registrar({
     '/dieta/refeicoes': telaRefeicoes,
     '/dieta/refeicao/:id': { view: telaRefeicaoSalva, recarregar: false },
   },
-  cartoesHoje: [{ ordem: 15, render: cartaoDieta }],
+  cartoesHoje: [{ ordem: 5, render: cartaoProximaRefeicao }, { ordem: 15, render: cartaoDieta }],
 });
