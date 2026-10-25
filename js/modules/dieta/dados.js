@@ -94,7 +94,7 @@ export function novoItem(alimento, gramas, { dia, refeicao, porcao = null }) {
 // Cópia "congelada" do alimento para guardar no diário
 export function copiaAlimento(a) {
   return {
-    fonte: a.fonte, ref: a.ref, nome: a.nome, marca: a.marca || '',
+    fonte: a.fonte, ref: a.ref, nome: a.nome, marca: a.marca || '', ...(a.detalhe ? { detalhe: a.detalhe } : {}),
     n: { ...a.n }, porcoes: a.porcoes || [],
   };
 }
@@ -198,6 +198,63 @@ export function buscarAlimentos(lista, texto, limite = 80) {
     res.push([pontos, a]);
   }
   return res.sort((x, y) => x[0] - y[0]).slice(0, limite).map(x => x[1]);
+}
+
+// ---------- Open Food Facts (produtos de mercado, com marca) ----------
+// Base aberta e colaborativa (ODbL). Busca online, só produtos vendidos no Brasil.
+const OFF_CAMPOS = 'code,product_name,product_name_pt,brands,nutriments,serving_size,serving_quantity,quantity';
+const cacheOFF = new Map();
+
+function numOFF(v) { const n = typeof v === 'string' ? Number(v.replace(',', '.')) : v; return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; }
+export function produtoOFF(p) {
+  const nu = p.nutriments || {};
+  let kcal = numOFF(nu['energy-kcal_100g']);
+  if (kcal == null && numOFF(nu.energy_100g) != null) kcal = Math.round(numOFF(nu.energy_100g) / 4.184);
+  const nome = String(p.product_name_pt || p.product_name || '').trim();
+  if (!nome || kcal == null) return null;
+  const sodio = numOFF(nu.sodium_100g);
+  const porcaoG = numOFF(p.serving_quantity);
+  const marca = String(p.brands || '').split(',')[0].trim();
+  return {
+    fonte: 'off', ref: String(p.code), nome, marca,
+    detalhe: [p.quantity, p.serving_size ? `porção ${p.serving_size}` : ''].filter(Boolean).join(' · '),
+    n: { kcal, p: numOFF(nu.proteins_100g), c: numOFF(nu.carbohydrates_100g), g: numOFF(nu.fat_100g), fibra: numOFF(nu.fiber_100g), sodio: sodio == null ? null : Math.round(sodio * 1000) },
+    porcoes: porcaoG && porcaoG > 0 && porcaoG < 2000 ? [{ nome: 'porção', gramas: porcaoG }] : [],
+  };
+}
+
+async function pedirJSON(url, ms = 9000) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctl.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+
+// Texto livre ou código de barras (8 a 14 dígitos)
+export async function buscarOFF(texto) {
+  const q = texto.trim();
+  if (q.length < 3) return [];
+  if (cacheOFF.has(q)) return cacheOFF.get(q);
+  let produtos;
+  if (/^\d{8,14}$/.test(q)) {
+    const d = await pedirJSON(`https://world.openfoodfacts.org/api/v2/product/${q}.json?fields=${OFF_CAMPOS}`);
+    produtos = d.product ? [d.product] : [];
+  } else {
+    try {
+      const d = await pedirJSON(`https://search.openfoodfacts.org/search?q=${encodeURIComponent(`${q} countries_tags:"en:brazil"`)}&page_size=40&langs=pt&fields=${OFF_CAMPOS}`);
+      produtos = d.hits || [];
+    } catch {
+      const d = await pedirJSON(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=40&tagtype_0=countries&tag_contains_0=contains&tag_0=brazil&fields=${OFF_CAMPOS}`, 12000);
+      produtos = d.products || [];
+    }
+  }
+  const vistos = new Set();
+  const res = produtos.map(produtoOFF).filter(a => a && !vistos.has(a.ref) && vistos.add(a.ref));
+  cacheOFF.set(q, res);
+  return res;
 }
 
 // ---------- Formatação ----------

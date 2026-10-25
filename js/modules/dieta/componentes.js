@@ -4,7 +4,7 @@
 import { folha, toast, Icone } from '../../core/ui.js';
 import { esc, num, fmtNum, debounce } from '../../core/util.js';
 import {
-  carregarTBCA, buscarAlimentos, listarMeusAlimentos, listarRefeicoesSalvas, recentes, salvarAlimento,
+  carregarTBCA, buscarAlimentos, buscarOFF, listarMeusAlimentos, listarRefeicoesSalvas, recentes, salvarAlimento,
   calcular, somar, fmtKcal, fmtG, NUTRIENTES,
 } from './dados.js';
 
@@ -30,7 +30,7 @@ function descricaoAlimento(a) {
 }
 
 function itemAlimento(a, i) {
-  const origem = a.fonte === 'tbca' ? '<span class="selo-fonte">TBCA</span>' : '<span class="selo-fonte meu">Meu</span>';
+  const origem = { tbca: '<span class="selo-fonte">TBCA</span>', off: '<span class="selo-fonte marca">Marca</span>' }[a.fonte] || '<span class="selo-fonte meu">Meu</span>';
   return `
     <button class="item-alimento" data-i="${i}">
       <span class="item-texto"><strong>${esc(a.nome)}${a.marca ? ` <small class="marca-alim">${esc(a.marca)}</small>` : ''}</strong>
@@ -50,7 +50,7 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
       let adicionados = 0;
       corpo.innerHTML = `
         <div class="busca-barra">
-          <label class="campo-busca">${Icone.busca}<input type="search" placeholder="Buscar na TBCA e nos seus alimentos" data-busca autocomplete="off"></label>
+          <label class="campo-busca">${Icone.busca}<input type="search" placeholder="Buscar alimento, marca ou código de barras" data-busca autocomplete="off"></label>
           <div class="abas-mini" data-abas>
             <button class="chip ativo" data-aba="recentes">Recentes</button>
             <button class="chip" data-aba="meus">Meus alimentos</button>
@@ -78,7 +78,9 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
           try {
             const [meus, tbca] = await Promise.all([listarMeusAlimentos(), carregarTBCA()]);
             if (campo.value.trim() !== texto) return;
-            mostrar([...buscarAlimentos(meus, texto, 20), ...buscarAlimentos(tbca, texto, 80)], 'Nada encontrado. Tente outra palavra (ex.: "frango peito") ou crie o alimento.', true);
+            const locais = [...buscarAlimentos(meus, texto, 20), ...buscarAlimentos(tbca, texto, 60)];
+            mostrar(locais, 'Nada na TBCA nem nos seus alimentos.', true);
+            marcas(texto, locais);
           } catch (e) { el.innerHTML = `<p class="erro centro">${esc(e.message)}</p>`; }
           return;
         }
@@ -94,6 +96,31 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
               <span class="item-add">${Icone.mais}</span></button>`;
           }).join('') : '<p class="sutil centro lista-vazia">Nenhuma refeição salva. No diário, use o menu de uma refeição para salvá-la e repetir depois com um toque.</p>';
         }
+      };
+
+      // Produtos com marca (Open Food Facts): busca online depois da local
+      let esperaMarcas = null;
+      const marcas = (texto, locais) => {
+        clearTimeout(esperaMarcas);
+        if (texto.length < 3) return;
+        const area = document.createElement('div');
+        area.className = 'secao-marcas';
+        area.innerHTML = `<div class="secao-lista">${Icone.busca}<span>Marcas · Open Food Facts</span></div><p class="sutil centro lista-vazia">Buscando produtos de mercado…</p>`;
+        el.querySelector('.item-criar')?.before(area);
+        esperaMarcas = setTimeout(async () => {
+          try {
+            const res = await buscarOFF(texto);
+            if (campo.value.trim() !== texto) return;
+            const ini = locais.length;
+            lista = [...locais, ...res];
+            area.innerHTML = res.length
+              ? `<div class="secao-lista">${Icone.busca}<span>Marcas · Open Food Facts</span></div>${res.map((a, k) => itemAlimento(a, ini + k)).join('')}`
+              : `<div class="secao-lista">${Icone.busca}<span>Marcas · Open Food Facts</span></div><p class="sutil centro lista-vazia">Nenhum produto com esse nome. Tente a marca + produto (ex.: "Nestlé Ninho") ou o código de barras.</p>`;
+          } catch (e) {
+            if (campo.value.trim() !== texto) return;
+            area.querySelector('.lista-vazia').textContent = navigator.onLine === false ? 'Sem internet: a busca de marcas precisa de conexão.' : 'Não foi possível buscar marcas agora. Tente de novo em instantes.';
+          }
+        }, 450);
       };
 
       const marcar = (botao) => {
@@ -146,7 +173,9 @@ export function escolherQuantidade(alimento, { gramas = null, porcao = null, ref
       corpo.innerHTML = `
         <div class="qtd-cab">
           <h3>${esc(alimento.nome)}</h3>
-          <p class="sutil pequeno">${alimento.fonte === 'tbca' ? `TBCA-USP · ${esc(alimento.grupo || '')} · ${esc(alimento.ref)}` : esc(alimento.marca || 'Alimento personalizado')}</p>
+          <p class="sutil pequeno">${alimento.fonte === 'tbca' ? `TBCA-USP · ${esc(alimento.grupo || '')} · ${esc(alimento.ref)}`
+            : alimento.fonte === 'off' ? [alimento.marca, alimento.detalhe, 'Open Food Facts'].filter(Boolean).map(esc).join(' · ')
+            : esc(alimento.marca || 'Alimento personalizado')}</p>
         </div>
         <div class="qtd-campos">
           <input class="campo qtd-numero" inputmode="decimal" data-qtd value="${fmtNum(qtd)}" aria-label="Quantidade">
@@ -158,8 +187,8 @@ export function escolherQuantidade(alimento, { gramas = null, porcao = null, ref
         <div class="abas-mini" data-rapidos></div>
         <div class="qtd-resultado" data-resultado></div>
         ${refeicoes ? `<label class="rotulo">Refeição<select class="campo" data-refeicao>${refeicoes.map(r => `<option value="${esc(r.id)}" ${r.id === refeicao ? 'selected' : ''}>${esc(r.nome)}</option>`).join('')}</select></label>` : ''}
-        ${alimento.fonte === 'tbca' ? `<details class="qtd-detalhe"><summary>Descrição completa (TBCA)</summary><p class="sutil pequeno">${esc(alimento.descricao || alimento.nome)}</p></details>
-          <button class="link-btn" data-personalizar>${Icone.editar}<span>Personalizar (nome, porção como "1 unidade")</span></button>` : ''}
+        ${alimento.fonte === 'tbca' ? `<details class="qtd-detalhe"><summary>Descrição completa (TBCA)</summary><p class="sutil pequeno">${esc(alimento.descricao || alimento.nome)}</p></details>` : ''}
+        ${alimento.fonte !== 'meu' ? `<button class="link-btn" data-personalizar>${Icone.editar}<span>${alimento.fonte === 'off' ? 'Salvar em Meus alimentos / corrigir valores' : 'Personalizar (nome, porção como "1 unidade")'}</span></button>` : ''}
         <div class="linha-botoes">
           ${remover ? '<button class="btn btn-secundario perigo" data-remover>Remover</button>' : ''}
           <button class="btn btn-primario" data-ok>${esc(botao)}</button>

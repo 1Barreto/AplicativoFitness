@@ -1140,3 +1140,7 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 .form label > span small { font-weight: 400; }
 .item-criar .item-texto strong { color: var(--p); }
 .item-criar .item-add { background: rgba(var(--p-rgb), .12); }
+.selo-fonte.marca { background: rgba(var(--p-rgb), .14); color: var(--p); }
+.secao-lista { display: flex; align-items: center; gap: 8px; padding: 12px 14px 6px; font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--texto-2); border-top: 1px solid var(--borda); }
+.secao-lista svg { width: 14px; height: 14px; }
+.secao-marcas .lista-vazia { padding: 14px 16px 18px; }
