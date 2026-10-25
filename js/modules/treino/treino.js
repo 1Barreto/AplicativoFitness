@@ -287,13 +287,11 @@ async function cartaoProximo(el) {
     el.innerHTML = `<a class="cartao cartao-destaque" href="#/treino/ativo">${Icone.play}<div><small>Treino em andamento</small><strong>${esc(ativo.nome)}</strong></div>${Icone.seta}</a>`;
     return;
   }
-  const mapa = await mapaDeExercicios();
   el.innerHTML = `
     <div class="cartao">
       <div class="cartao-cab">${Icone.treino}<h3>Próximo treino</h3></div>
       ${prox ? `
         <p class="destaque-grande">${esc(prox.nome)}</p>
-        <p class="sutil">${(prox.exercicios || []).slice(0, 5).map(e => esc(mapa.get(e.exercicio_id)?.nome || '')).join(' · ')}${(prox.exercicios || []).length > 5 ? '…' : ''}</p>
         <button class="btn btn-primario btn-bloco" data-iniciar>${Icone.play}<span>Iniciar ${esc(prox.nome)}</span></button>`
       : `<p class="sutil">Crie sua primeira rotina para receber sugestões.</p>
          <div class="linha-botoes"><a class="btn btn-primario" href="#/treino/rotina/nova">Criar rotina</a><button class="btn btn-secundario" data-vazio>Treino vazio</button></div>`}
