@@ -1060,7 +1060,14 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 .segmento button svg { width: 18px; height: 18px; }
 .segmento button.ativo { background: rgba(var(--p-rgb), .14); border-color: rgba(var(--p-rgb), .45); color: var(--p); }
 .segmento button[data-t=off].ativo { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .18); color: var(--texto); }
-.tipo-dia { margin-bottom: -4px; }
+.tipo-dia { flex: 1; }
+.resumo-topo { display: flex; align-items: center; gap: 8px; margin-bottom: -4px; }
+.btn-editar-metas { width: 46px; height: 46px; border-radius: 14px; background: #141416; color: var(--texto); }
+.btn-editar-metas svg { width: 20px; height: 20px; }
+.resumo-numeros .linha-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; width: 100%; border: 0; border-bottom: 1px solid #18181b; padding: 0 0 5px; background: none; color: var(--texto); font: inherit; cursor: pointer; text-align: left; }
+.linha-meta b { display: inline-flex; align-items: center; gap: 6px; font-family: var(--fonte-titulo); font-size: 16px; }
+.linha-meta svg { width: 14px; height: 14px; color: var(--p); }
+.linha-meta small { color: var(--texto-2); font-size: 13px; }
 .tipo-auto { margin: -8px 0 -6px; text-align: center; }
 .semana-dia.treino small { color: var(--p); }
 .tipo-mini { font-size: 10px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; background: #1c1c1f; color: var(--texto-2); }

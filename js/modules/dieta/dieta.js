@@ -61,13 +61,13 @@ function blocoResumo(total, metas) {
       </div>
       <div class="resumo-numeros">
         <div><small>Consumido</small><b>${fmtKcal(total.kcal)}</b></div>
-        <div><small>Meta</small><b>${meta ? fmtKcal(meta) : '–'}</b></div>
+        <button class="linha-meta" data-acao="metas"><small>Meta</small><b>${meta ? fmtKcal(meta) : 'Definir'}${Icone.editar}</b></button>
         <div><small>Fibra</small><b>${fmtG(total.fibra)} g</b></div>
         <div><small>Sódio</small><b>${fmtKcal(total.sodio)} mg</b></div>
       </div>
     </div>
     <div class="resumo-macros">${MACROS.map(macro).join('')}</div>
-    ${meta ? '' : '<button class="btn btn-secundario btn-pequeno btn-bloco" data-acao="metas">Definir metas de calorias e macros</button>'}`;
+    ${meta && MACROS.every(([k]) => metas[k]) ? '' : `<button class="btn btn-secundario btn-pequeno btn-bloco" data-acao="metas">${Icone.editar}<span>${meta ? 'Definir metas de macros' : 'Definir metas de calorias e macros'}</span></button>`}`;
 }
 
 // Calorias da semana (barras), com a linha da meta
@@ -131,8 +131,11 @@ async function telaDieta(el, _p, query) {
     <div class="dieta-grade">
       <div class="dieta-lateral">
         <section class="cartao dieta-resumo">
-          <div class="segmento tipo-dia" data-tipo-dia>
-            ${Object.entries(TIPOS_DIA).map(([k, nome]) => `<button data-t="${k}" class="${tipoDia.tipo === k ? 'ativo' : ''}">${k === 'treino' ? Icone.treino : Icone.hoje}<span>${nome}</span></button>`).join('')}
+          <div class="resumo-topo">
+            <div class="segmento tipo-dia" data-tipo-dia>
+              ${Object.entries(TIPOS_DIA).map(([k, nome]) => `<button data-t="${k}" class="${tipoDia.tipo === k ? 'ativo' : ''}">${k === 'treino' ? Icone.treino : Icone.hoje}<span>${nome}</span></button>`).join('')}
+            </div>
+            <button class="icon-btn btn-editar-metas" data-acao="metas" aria-label="Editar metas" title="Editar metas">${Icone.editar}</button>
           </div>
           ${!tipoDia.manual && tipoDia.tipo === 'treino' ? '<p class="sutil pequeno tipo-auto">Marcado automaticamente: há treino registrado neste dia.</p>' : ''}
           ${blocoResumo(total, metas)}
