@@ -11,6 +11,7 @@ import { exportarBackup, importarBackup } from '../core/backup.js';
 import { prefs } from './treino/dados.js';
 import { importarHevy } from './treino/importar-hevy.js';
 import { escolherDescanso } from './treino/componentes.js';
+import { TEMAS, temaAtual, aplicarTema } from '../core/tema.js';
 
 const VERSAO_APP = '1.2.0';
 
@@ -24,6 +25,16 @@ async function telaAjustes(el) {
   el.innerHTML = `
     <h2 class="secao">Conta e sincronização</h2>
     <div class="cartao" data-conta></div>
+
+    <h2 class="secao">Aparência</h2>
+    <div class="cartao">
+      <div class="temas" data-temas>
+        ${TEMAS.map(t => `
+          <button class="tema-opcao ${t.id === temaAtual() ? 'ativo' : ''}" data-tema-id="${t.id}">
+            <span class="tema-cores"><i style="background:${t.p}"></i><i style="background:${t.s}"></i></span>${t.nome}
+          </button>`).join('')}
+      </div>
+    </div>
 
     <h2 class="secao">Treino</h2>
     <div class="cartao lista-simples">
@@ -75,6 +86,11 @@ async function telaAjustes(el) {
     prefs.definirDescansoPadrao(seg);
     el.querySelector('[data-pref=descanso] [data-valor]').textContent = seg ? `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}` : 'Desligado';
     toast('Descanso padrão salvo');
+  };
+  el.querySelector('[data-temas]').onclick = e => {
+    const b = e.target.closest('[data-tema-id]'); if (!b) return;
+    aplicarTema(b.dataset.temaId);
+    el.querySelectorAll('[data-tema-id]').forEach(x => x.classList.toggle('ativo', x === b));
   };
   el.querySelector('[data-pref=som]').onchange = e => som.definirAtivo(e.target.checked);
   el.querySelector('[data-pref=tela]').onchange = e => prefs.definirManterTelaLigada(e.target.checked);

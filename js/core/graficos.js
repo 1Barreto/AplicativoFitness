@@ -12,7 +12,7 @@ async function chart() {
 function cores() {
   const css = getComputedStyle(document.documentElement);
   const v = n => css.getPropertyValue(n).trim();
-  return { texto: v('--texto-2'), destaque: v('--destaque'), destaque2: v('--destaque-2'), fonte: v('--fonte') };
+  return { texto: v('--texto-2'), destaque: v('--destaque'), destaque2: v('--destaque-2'), secundaria: v('--secundaria'), fonte: v('--fonte') };
 }
 
 // "#rrggbb" ou "#rrggbbaa" + opacidade (0–1) -> "#rrggbbaa"
@@ -29,7 +29,7 @@ const pluginBrilho = {
     if (chart.config.type !== 'line') return;
     const ctx = chart.ctx;
     ctx.save();
-    ctx.shadowColor = alfa(args.meta.dataset?.options?.borderColor || '#2ee6b6', .7);
+    ctx.shadowColor = alfa(args.meta.dataset?.options?.borderColor || cores().destaque, .7);
     ctx.shadowBlur = 14;
   },
   afterDatasetDraw(chart) { if (chart.config.type === 'line') chart.ctx.restore(); },
@@ -47,7 +47,7 @@ export async function criarGrafico(canvas, { tipo = 'line', rotulos, series, suf
     return null;
   }
   const c = cores();
-  const paleta = [c.destaque, '#4fa8ff', '#f5b84c', '#b98cff', '#ff5c7a'];
+  const paleta = [c.destaque, c.secundaria, '#8e8e93', '#b98cff', '#ff5c7a'];
   const nf = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
   const fmt = { format: v => (formatar ? formatar(v) : nf.format(v)) };
   const eixoValor = horizontal ? 'x' : 'y';
