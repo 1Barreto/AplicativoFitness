@@ -105,6 +105,15 @@ async function iniciar() {
   Auth.iniciar(); // em segundo plano; quando terminar, dispara a sincronização
 
   if ('serviceWorker' in navigator) {
+    // Versão nova assumiu no meio do carregamento: recarrega uma vez para não
+    // misturar arquivos novos com antigos (ex.: JS novo com CSS antigo).
+    const tinhaControle = !!navigator.serviceWorker.controller;
+    let recarregando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!tinhaControle || recarregando) return;
+      recarregando = true;
+      location.reload();
+    });
     navigator.serviceWorker.register('service-worker.js').catch(e => console.warn('SW', e));
   }
 }

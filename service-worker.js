@@ -8,7 +8,7 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v23';
+const VERSAO = 'v24';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
 const CACHE_FOTOS = 'fotos-v1'; // fotos dos exercícios (não mudam)
@@ -110,7 +110,8 @@ self.addEventListener('fetch', (event) => {
     const cache = await caches.open(CACHE_APP);
     const chave = req.mode === 'navigate' ? './index.html' : req;
     const emCache = await cache.match(chave, { ignoreSearch: req.mode === 'navigate' });
-    const daRede = fetch(req).then(resp => {
+    // no-cache: revalida com o servidor em vez de reaproveitar o cache HTTP do navegador
+    const daRede = (req.mode === 'navigate' ? fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(req, { cache: 'no-cache' })).then(resp => {
       if (resp.ok && resp.type === 'basic') cache.put(req.mode === 'navigate' ? './index.html' : req, resp.clone());
       return resp;
     }).catch(() => null);
