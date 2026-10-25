@@ -137,7 +137,9 @@ async function telaDieta(el, _p, query) {
             </div>
             <button class="icon-btn btn-editar-metas" data-acao="metas" aria-label="Editar metas" title="Editar metas">${Icone.editar}</button>
           </div>
-          ${!tipoDia.manual && tipoDia.tipo === 'treino' ? '<p class="sutil pequeno tipo-auto">Marcado automaticamente: há treino registrado neste dia.</p>' : ''}
+          <p class="sutil pequeno tipo-auto">${tipoDia.origem === 'manual' ? 'Marcado por você. O ciclo (1 off, 2 de treino) recomeça a partir deste dia.'
+            : tipoDia.origem === 'ciclo' ? 'Pelo ciclo: 1 dia off, depois 2 de treino. Toque para mudar e recomeçar daqui.'
+            : tipoDia.tipo === 'treino' ? 'Há treino registrado neste dia. Marque um dia para começar o ciclo.' : 'Marque um dia como off ou treino para começar o ciclo.'}</p>
           ${blocoResumo(total, metas)}
         </section>
         <nav class="dieta-atalhos">

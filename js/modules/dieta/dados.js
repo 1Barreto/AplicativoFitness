@@ -67,18 +67,31 @@ export function metasDe(config) {
   return { treino: m.treino || {}, off: m.off || {} };
 }
 
-// Tipo de cada dia: o que foi marcado; sem marcação, "treino" se houve
-// treino registrado naquele dia, senão "off".
+// Tipo de cada dia, pela regra do ciclo: 1 dia off seguido de 2 dias de treino.
+// Cada dia marcado manualmente recomeça o ciclo a partir dele (off = início do
+// ciclo; treino = primeiro dos dois dias de treino). Para dias antes da primeira
+// marcação, o ciclo é contado para trás. Sem nenhuma marcação, vale "treino"
+// quando há treino registrado no dia.
+export const CICLO = ['off', 'treino', 'treino'];
+const diaNum = d => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 86400000;
+
 export async function tiposDosDias(dias) {
   const [marcas, treinos] = await Promise.all([DB.todos(T.dias), listarTreinos()]);
   const marcado = new Map();
-  marcas.sort((a, b) => (a.updated_at || '').localeCompare(b.updated_at || '')).forEach(m => marcado.set(m.dia, m));
+  marcas.sort((a, b) => (a.updated_at || '').localeCompare(b.updated_at || '')).forEach(m => { if (m.tipo) marcado.set(m.dia, m); });
+  const ancoras = [...marcado.values()].sort((a, b) => a.dia.localeCompare(b.dia));
   const comTreino = new Set(treinos.map(t => dataInput(t.inicio)));
-  return Object.fromEntries(dias.map(d => [d, {
-    tipo: marcado.get(d)?.tipo || (comTreino.has(d) ? 'treino' : 'off'),
-    manual: !!marcado.get(d)?.tipo,
-    registro: marcado.get(d) || null,
-  }]));
+  return Object.fromEntries(dias.map(d => {
+    const proprio = marcado.get(d) || null;
+    if (proprio) return [d, { tipo: proprio.tipo, manual: true, origem: 'manual', registro: proprio }];
+    if (!ancoras.length) return [d, { tipo: comTreino.has(d) ? 'treino' : 'off', manual: false, origem: 'treinos', registro: null }];
+    // última marcação até este dia; se não houver, a primeira depois dele
+    let ancora = null;
+    for (const m of ancoras) { if (m.dia <= d) ancora = m; else break; }
+    ancora ||= ancoras[0];
+    const pos = (CICLO.indexOf(ancora.tipo) + diaNum(d) - diaNum(ancora.dia)) % 3;
+    return [d, { tipo: CICLO[(pos + 3) % 3], manual: false, origem: 'ciclo', registro: null }];
+  }));
 }
 export async function marcarTipoDia(dia, tipo) {
   const atual = (await tiposDosDias([dia]))[dia].registro;
