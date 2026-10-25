@@ -6,7 +6,7 @@ import { esc, fmtNum, clone } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio } from '../../core/ui.js';
 import { pesoAtual } from '../corpo/dados.js';
 import {
-  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, salvarItem, excluirItem, novoItem,
+  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, salvarItem, excluirItem, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
   copiaAlimento, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS,
 } from './dados.js';
@@ -70,6 +70,26 @@ function blocoResumo(total, metas) {
     ${meta ? '' : '<button class="btn btn-secundario btn-pequeno btn-bloco" data-acao="metas">Definir metas de calorias e macros</button>'}`;
 }
 
+// Calorias da semana (barras), com a linha da meta
+function cartaoSemana(semana, totais, metas, dia) {
+  const valores = semana.map(d => totais[d].kcal);
+  const teto = Math.max(metas.kcal || 0, ...valores) * 1.1 || 1;
+  const comDados = valores.filter(v => v > 0);
+  const media = comDados.length ? comDados.reduce((a, b) => a + b, 0) / comDados.length : 0;
+  return `
+    <section class="cartao dieta-semana">
+      <div class="cartao-cab">${Icone.progresso}<h3>Semana</h3><span class="link-cab sutil">média ${fmtKcal(media)} kcal</span></div>
+      <div class="semana-grafico">
+        ${metas.kcal ? `<i class="semana-meta" style="bottom:calc(24px + (100% - 24px) * ${(metas.kcal / teto).toFixed(3)})"><span>${fmtKcal(metas.kcal)}</span></i>` : ''}
+        ${semana.map((d, k) => `
+          <button class="semana-barra ${d === dia ? 'ativo' : ''} ${metas.kcal && valores[k] > metas.kcal ? 'passou' : ''}" data-ir="${d}" title="${fmtKcal(valores[k])} kcal">
+            <span class="barra-area"><i style="height:${valores[k] / teto * 100}%"></i></span>
+            <small>${DIAS_SEMANA[dataDe(d).getDay()]}</small>
+          </button>`).join('')}
+      </div>
+    </section>`;
+}
+
 // ---------- Diário ----------
 async function telaDieta(el, _p, query) {
   definirTitulo('Dieta');
@@ -86,6 +106,7 @@ async function telaDieta(el, _p, query) {
   const d0 = dataDe(dia);
   const seg = somarDias(dia, -((d0.getDay() + 6) % 7));
   const semana = Array.from({ length: 7 }, (_, i) => somarDias(seg, i));
+  const totaisSemana = await totaisPorDia(semana);
   const ir = d => { location.hash = d === hojeISO() ? '#/dieta' : `#/dieta?dia=${d}`; };
 
   el.classList.add('tela-dieta');
@@ -113,9 +134,11 @@ async function telaDieta(el, _p, query) {
           <a class="chip" href="#/dieta/refeicoes">${Icone.copiar}<span>Refeições</span></a>
           ${!itens.length ? `<button class="chip" data-acao="copiar-dia">${Icone.historico}<span>Copiar dia anterior</span></button>` : ''}
         </nav>
+        ${cartaoSemana(semana, totaisSemana, metas, dia)}
       </div>
 
       <div class="dieta-refeicoes">
+        <div class="dieta-colunas" aria-hidden="true"><span>Alimento</span><span>Quantidade</span><span>Proteína</span><span>Carbo</span><span>Gordura</span><span>kcal</span><span></span></div>
         ${refeicoes.map(r => {
           const lista = doGrupo(r);
           const t = somar(lista);
@@ -123,6 +146,7 @@ async function telaDieta(el, _p, query) {
           <article class="cartao refeicao" data-ref="${esc(r.id)}">
             <div class="refeicao-topo">
               <div class="refeicao-titulo"><h3>${esc(r.nome)}</h3>${lista.length ? linhaMacros(t) : ''}</div>
+              ${lista.length ? `<span class="col col-qtd">${lista.length} ${lista.length === 1 ? 'item' : 'itens'}</span><span class="col m-p">${fmtG(t.p)} g</span><span class="col m-c">${fmtG(t.c)} g</span><span class="col m-g">${fmtG(t.g)} g</span>` : '<span class="col col-vazia">Nada registrado</span>'}
               <span class="refeicao-kcal">${lista.length ? `${fmtKcal(t.kcal)}<small>kcal</small>` : ''}</span>
               <button class="icon-btn" data-acao="menu-ref" aria-label="Opções da refeição">${Icone.pontos}</button>
             </div>
@@ -130,7 +154,8 @@ async function telaDieta(el, _p, query) {
               const v = calcular(i.alimento.n, i.gramas);
               return `<li><button data-item="${i.id}">
                 <span class="item-texto"><strong>${esc(i.alimento.nome)}</strong><small>${fmtQtd(i)} · P ${fmtG(v.p)} · C ${fmtG(v.c)} · G ${fmtG(v.g)}</small></span>
-                <b>${fmtKcal(v.kcal)}</b></button></li>`;
+                <span class="col col-qtd">${fmtQtd(i)}</span><span class="col">${fmtG(v.p)}</span><span class="col">${fmtG(v.c)}</span><span class="col">${fmtG(v.g)}</span>
+                <b>${fmtKcal(v.kcal)}</b><span class="col col-seta">${Icone.editar}</span></button></li>`;
             }).join('')}</ul>` : ''}
             ${r.id === '__outros' ? '' : `<button class="btn-add-alimento" data-acao="add">${Icone.mais}<span>Adicionar alimento</span></button>`}
           </article>`;

@@ -50,6 +50,11 @@ export async function itensDoDia(dia) {
 export async function diasComRegistro() {
   return new Set((await DB.todos(T.diario)).map(i => i.dia));
 }
+// Totais (kcal e macros) de cada dia pedido: { 'aaaa-mm-dd': {kcal, p, c, g...} }
+export async function totaisPorDia(dias) {
+  const todos = await DB.todos(T.diario);
+  return Object.fromEntries(dias.map(d => [d, somar(todos.filter(i => i.dia === d))]));
+}
 export const salvarItem = i => DB.salvar(T.diario, i);
 export const excluirItem = id => DB.excluir(T.diario, id);
 

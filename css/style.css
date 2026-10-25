@@ -1051,14 +1051,65 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
   .resumo-kcal .anel { width: 112px; height: 112px; }
   .macro-topo b { font-size: 16px; }
 }
+/* Colunas e gráfico da semana: só no computador */
+.tela-dieta .col, .dieta-colunas, .dieta-semana { display: none; }
+
 @media (min-width: 900px) {
-  .dieta-dias { flex-direction: row; align-items: center; gap: 16px; }
-  .dieta-dia-topo { gap: 8px; min-width: 300px; }
-  .semana { flex: 1; max-width: 560px; margin-left: auto; }
-  .dieta-grade { grid-template-columns: minmax(320px, 400px) minmax(0, 1fr); align-items: start; gap: 16px; }
+  .tela-dieta { gap: 16px; }
+  .dieta-dias { flex-direction: row; align-items: center; gap: 24px; background: var(--cartao); border-radius: var(--raio); padding: 12px 14px; }
+  .dieta-dia-topo { gap: 8px; width: 300px; flex-shrink: 0; }
+  .dieta-dia-topo strong { flex: 1; text-align: center; font-size: 22px; }
+  .semana { flex: 1; gap: 8px; }
+  .semana-dia { flex-direction: row; justify-content: center; gap: 8px; padding: 10px 0; background: #141416; position: relative; }
+  .semana-dia small { font-size: 13px; }
+  .semana-dia b { font-size: 18px; }
+  .semana-dia i { position: absolute; bottom: 4px; left: 50%; margin-left: -2.5px; }
+  .semana-dia:hover { border-color: rgba(var(--p-rgb), .3); }
+
+  .dieta-grade { grid-template-columns: clamp(320px, 26vw, 400px) minmax(0, 1fr); align-items: start; gap: 16px; }
   .dieta-lateral { position: sticky; top: 16px; }
-  .dieta-refeicoes { display: block; columns: 340px 2; column-gap: 12px; }
-  .dieta-refeicoes > .refeicao { break-inside: avoid; margin-bottom: 12px; }
+  .resumo-kcal .anel { width: 150px; height: 150px; }
+  .anel-texto strong { font-size: 30px; }
+
+  .dieta-semana { display: block; }
+  .semana-grafico { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; height: 150px; margin-top: 14px; }
+  .semana-barra { display: flex; flex-direction: column; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: var(--texto-2); cursor: pointer; min-height: 0; }
+  .barra-area { flex: 1; width: 100%; max-width: 30px; display: flex; align-items: flex-end; border-radius: 8px; background: #141416; overflow: hidden; }
+  .barra-area i { display: block; width: 100%; border-radius: 8px; background: rgba(var(--p-rgb), .45); transition: height .4s ease; }
+  .semana-barra.ativo .barra-area i { background: var(--p); box-shadow: 0 0 12px rgba(var(--p-rgb), .5); }
+  .semana-barra.passou .barra-area i { background: rgba(var(--s-rgb), .6); }
+  .semana-barra.ativo.passou .barra-area i { background: var(--s); }
+  .semana-barra small { font-size: 12px; font-weight: 600; }
+  .semana-barra.ativo small { color: var(--p); }
+  .semana-meta { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255, 255, 255, .25); pointer-events: none; z-index: 1; }
+  .semana-meta span { position: absolute; right: 0; top: -18px; font-size: 11px; font-style: normal; color: var(--texto-2); }
+
+  /* Refeições em tabela: colunas alinhadas */
+  .dieta-refeicoes { display: flex; flex-direction: column; gap: 10px; }
+  .dieta-colunas, .tela-dieta .refeicao-topo, .tela-dieta .refeicao-itens button {
+    display: grid; grid-template-columns: minmax(0, 1fr) 96px 66px 66px 66px 78px 32px; align-items: center; gap: 6px;
+  }
+  .dieta-colunas { padding: 0 18px; font-size: 12px; font-weight: 700; color: var(--texto-2); text-transform: uppercase; letter-spacing: .05em; }
+  .dieta-colunas span:nth-child(n+2), .tela-dieta .col, .tela-dieta .refeicao-itens b, .tela-dieta .refeicao-kcal { text-align: right; }
+  .tela-dieta .col { display: block; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .tela-dieta .refeicao { padding: 14px 18px 8px; }
+  .tela-dieta .refeicao-topo .col { font-family: var(--fonte-titulo); font-size: 15px; font-weight: 700; color: var(--m, var(--texto-2)); }
+  .tela-dieta .refeicao-topo .col-qtd { color: var(--texto-2); font-family: var(--fonte); font-weight: 500; font-size: 13px; }
+  .tela-dieta .refeicao-topo .col-vazia { grid-column: 2 / 6; color: var(--texto-2); font-family: var(--fonte); font-weight: 500; font-size: 13px; }
+  .tela-dieta .refeicao-titulo .macros-linha { display: none; }
+  .tela-dieta .refeicao-topo .icon-btn { margin: 0; justify-self: end; width: 32px; height: 32px; }
+  .tela-dieta .refeicao-kcal { font-size: 20px; }
+  .tela-dieta .refeicao-itens { margin-top: 8px; }
+  .tela-dieta .refeicao-itens button { padding: 9px 0; border-radius: 10px; }
+  .tela-dieta .refeicao-itens button:hover { background: rgba(255, 255, 255, .03); }
+  .tela-dieta .refeicao-itens .item-texto small { display: none; }
+  .tela-dieta .refeicao-itens strong { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; }
+  .tela-dieta .refeicao-itens .col { color: var(--texto); }
+  .tela-dieta .refeicao-itens .col-qtd { color: var(--texto-2); }
+  .tela-dieta .refeicao-itens .col-seta { display: flex; justify-content: flex-end; color: var(--texto-2); opacity: 0; transition: opacity .15s; }
+  .tela-dieta .refeicao-itens .col-seta svg { width: 16px; height: 16px; }
+  .tela-dieta .refeicao-itens button:hover .col-seta { opacity: 1; }
+  .tela-dieta .btn-add-alimento { font-size: 14px; padding: 8px 0 6px; }
 }
 
 .form label > span small { font-weight: 400; }
