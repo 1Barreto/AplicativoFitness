@@ -1196,3 +1196,11 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 .proxima-ultima li { justify-content: flex-start; }
 .proxima-ultima li b { min-width: 64px; }
 .hora-pill { white-space: nowrap; flex: none; }
+/* Próximo treino (Hoje): no computador, nome e botão centralizados e maiores */
+@media (min-width: 900px) {
+  .cartao-prox-treino { display: flex; flex-direction: column; }
+  .prox-treino-corpo { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; text-align: center; }
+  .prox-treino-corpo .destaque-grande { font-size: 26px; }
+  .prox-treino-corpo .btn { min-height: 60px; font-size: 18px; border-radius: 18px; }
+  .prox-treino-corpo .btn svg { width: 22px; height: 22px; }
+}

@@ -288,11 +288,11 @@ async function cartaoProximo(el) {
     return;
   }
   el.innerHTML = `
-    <div class="cartao">
+    <div class="cartao ${prox ? 'cartao-prox-treino' : ''}">
       <div class="cartao-cab">${Icone.treino}<h3>Próximo treino</h3></div>
       ${prox ? `
-        <p class="destaque-grande">${esc(prox.nome)}</p>
-        <button class="btn btn-primario btn-bloco" data-iniciar>${Icone.play}<span>Iniciar ${esc(prox.nome)}</span></button>`
+        <div class="prox-treino-corpo"><p class="destaque-grande">${esc(prox.nome)}</p>
+        <button class="btn btn-primario btn-bloco" data-iniciar>${Icone.play}<span>Iniciar ${esc(prox.nome)}</span></button></div>`
       : `<p class="sutil">Crie sua primeira rotina para receber sugestões.</p>
          <div class="linha-botoes"><a class="btn btn-primario" href="#/treino/rotina/nova">Criar rotina</a><button class="btn btn-secundario" data-vazio>Treino vazio</button></div>`}
     </div>`;
