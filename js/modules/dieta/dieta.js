@@ -247,6 +247,7 @@ async function adicionarAlimentos({ dia, refeicao }) {
   let ordem = Date.now();
   return escolherAlimentos({
     titulo: `Adicionar em ${refeicao.nome}`,
+    refeicaoNome: refeicao.nome,
     aoEscolher: async (alimento) => {
       const r = await escolherQuantidade(alimento, alimento.ultimaQtd ? { gramas: alimento.ultimaQtd, porcao: alimento.ultimaPorcao } : {});
       if (!r) return false;

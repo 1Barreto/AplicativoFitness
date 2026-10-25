@@ -2,7 +2,7 @@
 // formulário de alimento personalizado e metas.
 
 import { folha, toast, Icone } from '../../core/ui.js';
-import { esc, num, fmtNum, debounce } from '../../core/util.js';
+import { esc, num, fmtNum, debounce, normalizar } from '../../core/util.js';
 import {
   carregarBase, buscarAlimentos, buscarOFF, listarMeusAlimentos, listarRefeicoesSalvas, recentes, salvarAlimento,
   calcular, somar, fmtKcal, fmtG, NUTRIENTES,
@@ -43,20 +43,23 @@ function itemAlimento(a, i) {
 
 // Folha de busca. aoEscolher(alimento) deve retornar true se algo foi adicionado.
 // aoEscolherRefeicao(refeicaoSalva) idem. Fica aberta para adicionar vários.
-export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, aoEscolherRefeicao = null }) {
+// refeicaoNome: as refeições salvas mostradas são só as que contêm esse nome
+// ("Almoço" mostra "Almoço" e "Almoço dia off"), com opção de ver todas.
+export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, aoEscolherRefeicao = null, refeicaoNome = '' }) {
   return folha({
     titulo, classe: 'modal-alto',
     conteudo: (corpo, fechar) => {
-      let aba = 'recentes';
+      let aba = aoEscolherRefeicao ? 'refeicoes' : 'recentes';
+      let todasRefs = !refeicaoNome;
       let lista = [];
       let adicionados = 0;
       corpo.innerHTML = `
         <div class="busca-barra">
           <label class="campo-busca">${Icone.busca}<input type="search" placeholder="Buscar alimento, marca ou código de barras" data-busca autocomplete="off"></label>
           <div class="abas-mini" data-abas>
-            <button class="chip ativo" data-aba="recentes">Recentes</button>
+            ${aoEscolherRefeicao ? '<button class="chip ativo" data-aba="refeicoes">Refeições salvas</button>' : ''}
+            <button class="chip ${aoEscolherRefeicao ? '' : 'ativo'}" data-aba="recentes">Recentes</button>
             <button class="chip" data-aba="meus">Meus alimentos</button>
-            ${aoEscolherRefeicao ? '<button class="chip" data-aba="refeicoes">Refeições salvas</button>' : ''}
           </div>
         </div>
         <div class="lista-exercicios" data-lista></div>
@@ -89,14 +92,18 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
         if (aba === 'recentes') mostrar(await recentes(), 'Os alimentos que você registrar aparecem aqui. Use a busca para encontrar nas tabelas.');
         else if (aba === 'meus') mostrar(await listarMeusAlimentos(), 'Nenhum alimento personalizado ainda.', true);
         else {
-          const refs = await listarRefeicoesSalvas();
+          const todas = await listarRefeicoesSalvas();
+          const alvo = normalizar(refeicaoNome);
+          const refs = todasRefs ? todas : todas.filter(r => normalizar(r.nome).includes(alvo));
+          const outras = todas.length - refs.length;
           lista = refs;
-          el.innerHTML = refs.length ? refs.map((r, i) => {
+          const verTodas = outras ? `<button class="link-btn centro-bloco" data-todas>Mostrar todas as refeições salvas (${todas.length})</button>` : '';
+          el.innerHTML = (refs.length ? refs.map((r, i) => {
             const t = somar(r.itens);
             return `<button class="item-alimento" data-r="${i}">
               <span class="item-texto"><strong>${esc(r.nome)}</strong><small>${r.itens.length} ${r.itens.length === 1 ? 'item' : 'itens'} · ${fmtKcal(t.kcal)} kcal</small></span>
               <span class="item-add">${Icone.mais}</span></button>`;
-          }).join('') : '<p class="sutil centro lista-vazia">Nenhuma refeição salva. No diário, use o menu de uma refeição para salvá-la e repetir depois com um toque.</p>';
+          }).join('') : `<p class="sutil centro lista-vazia">${todas.length ? `Nenhuma refeição salva com o nome "${esc(refeicaoNome)}".` : 'Nenhuma refeição salva. No diário, use o menu de uma refeição para salvá-la e repetir depois com um toque.'}</p>`) + verTodas;
         }
       };
 
@@ -149,6 +156,7 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
       });
       el.addEventListener('click', async e => {
         if (e.target.closest('[data-criar]')) { criarNovo(); return; }
+        if (e.target.closest('[data-todas]')) { todasRefs = true; desenhar(); return; }
         const b = e.target.closest('[data-i],[data-r]'); if (!b) return;
         if (b.dataset.r !== undefined) { if (await aoEscolherRefeicao(lista[+b.dataset.r])) marcar(b); return; }
         if (await aoEscolher(lista[+b.dataset.i])) marcar(b);

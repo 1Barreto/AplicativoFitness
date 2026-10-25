@@ -1171,3 +1171,6 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 }
 @media (min-width: 900px) { .grade-hoje > .slot-cartao:has(.cartao-proxima) { grid-column: span 2; } }
 @media (min-width: 1500px) { .grade-hoje > .slot-cartao:has(.cartao-proxima) { grid-column: span 3; } }
+.link-btn.centro-bloco { display: flex; margin: 14px auto; font-size: 14px; }
+.busca-barra .abas-mini { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.busca-barra .abas-mini .chip { flex: none; }
