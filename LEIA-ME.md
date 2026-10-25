@@ -125,3 +125,10 @@ Os ícones em `icons/` já estão prontos (halter branco em fundo azul). Para tr
 ## Fotos dos exercícios
 
 Por padrão cada exercício mostra um desenho do [Everkinetic](https://github.com/everkinetic/data) (licença CC BY-SA 4.0, em `img/desenhos/`). Quando não há desenho, usa uma foto do [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (domínio público; miniaturas em `img/exercicios/`, foto grande carregada do GitHub). Para trocar a foto de qualquer exercício, abra o exercício e toque em **Trocar foto** (dá para escolher outra do banco ou usar uma foto sua).
+
+## Dieta
+
+Aba **Dieta**: diário do dia com calorias, macros e refeições; busca de alimentos; alimentos personalizados; refeições salvas; metas.
+
+- Alimentos: **TBCA** (Tabela Brasileira de Composição de Alimentos, USP/FoRC), 5.668 itens, em `js/modules/dieta/tbca.json` (valores por 100 g; carboidratos = carboidrato disponível). Gerado por `tools/gerar-tbca.py` a partir da raspagem pública em github.com/resen-dev/web-scraping-tbca.
+- Tabelas sincronizadas: `diario`, `alimentos`, `refeicoes`, `dieta_config` (já no `supabase/schema.sql`).

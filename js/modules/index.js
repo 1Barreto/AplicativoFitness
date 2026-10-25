@@ -10,6 +10,7 @@ import './treino/treino.js';
 import './treino/sessao.js';
 import './treino/historico.js';
 import './treino/progresso.js';
+import './dieta/dieta.js';
 import './corpo/corpo.js';
 import './perfil/perfil.js';
 import './ajustes.js';

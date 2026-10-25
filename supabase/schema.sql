@@ -80,9 +80,11 @@ select public.app_criar_tabela('treinos');     -- treinos realizados (histórico
 -- ---------- Medidas corporais (usadas também pela dieta) ----------
 select public.app_criar_tabela('medidas');
 
--- ---------- Futuro módulo de dieta (exemplo, descomente quando precisar) ----------
--- select public.app_criar_tabela('alimentos');
--- select public.app_criar_tabela('refeicoes');
+-- ---------- Módulo de dieta ----------
+select public.app_criar_tabela('diario');        -- alimentos registrados em cada dia
+select public.app_criar_tabela('alimentos');     -- alimentos personalizados
+select public.app_criar_tabela('refeicoes');     -- refeições salvas (combinações prontas)
+select public.app_criar_tabela('dieta_config');  -- refeições do dia e metas
 
 -- Segurança extra: só o dono do banco pode executar a função de criação
 revoke execute on function public.app_criar_tabela(text) from public, anon, authenticated;

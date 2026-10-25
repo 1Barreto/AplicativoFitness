@@ -13,7 +13,7 @@ import { importarHevy } from './treino/importar-hevy.js';
 import { escolherDescanso } from './treino/componentes.js';
 import { TEMAS, temaAtual, aplicarTema } from '../core/tema.js';
 
-const VERSAO_APP = '1.2.0';
+const VERSAO_APP = '1.3.0';
 
 async function telaAjustes(el) {
   definirTitulo('Ajustes');
@@ -73,6 +73,7 @@ async function telaAjustes(el) {
     <h2 class="secao">Sobre</h2>
     <div class="cartao lista-simples">
       <div class="linha-lista"><span class="item-texto"><strong>Versão</strong></span><span class="sutil">${VERSAO_APP}</span></div>
+      <div class="linha-lista"><span class="item-texto"><strong>Alimentos</strong><small><a href="https://www.tbca.net.br/" target="_blank" rel="noopener">Tabela Brasileira de Composição de Alimentos (TBCA)</a>, Universidade de São Paulo (USP) / FoRC. Valores por 100 g; carboidratos = carboidrato disponível.</small></span></div>
       <div class="linha-lista"><span class="item-texto"><strong>Imagens dos exercícios</strong><small>Desenhos: <a href="https://github.com/everkinetic/data" target="_blank" rel="noopener">Everkinetic</a> (CC BY-SA 4.0). Fotos: <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noopener">Free Exercise DB</a> (domínio público).</small></span></div>
       <button class="linha-lista" data-acao="atualizar"><span class="item-texto"><strong>Buscar atualização do app</strong><small>Recarrega a versão mais nova publicada</small></span>${Icone.sincronizar}</button>
       <button class="linha-lista perigo" data-acao="apagar"><span class="item-texto"><strong>Apagar dados deste aparelho</strong><small>Não apaga o que já está na nuvem</small></span>${Icone.lixo}</button>
