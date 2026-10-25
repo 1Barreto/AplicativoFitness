@@ -451,7 +451,6 @@ async function cartaoProximaRefeicao(el) {
   const prox = proximaRefeicao(config.refeicoes, itens);
   const metas = metasDe(config)[tipos[hoje].tipo] || {};
   const t = somar(consumidos(itens));
-  const resta = metas.kcal ? metas.kcal - t.kcal : null;
   const redesenhar = () => cartaoProximaRefeicao(el);
 
   if (!prox) {
@@ -483,7 +482,6 @@ async function cartaoProximaRefeicao(el) {
       <div class="proxima-corpo">
         <div class="proxima-info">
           <p class="proxima-nome">${esc(prox.nome)}</p>
-          <p class="sutil pequeno">${resta == null ? `${fmtKcal(t.kcal)} kcal consumidas hoje` : resta >= 0 ? `Faltam <b>${fmtKcal(resta)} kcal</b> para a meta de hoje` : `${fmtKcal(-resta)} kcal acima da meta de hoje`}</p>
           ${lista}
         </div>
         ${acoes ? `<div class="proxima-acoes">${acoes}</div>` : ''}
