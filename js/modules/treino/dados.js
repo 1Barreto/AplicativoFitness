@@ -204,12 +204,15 @@ export async function mapaDeRecordes() {
   return resultado;
 }
 
-// Próxima rotina sugerida: a seguinte à última rotina usada (em ordem).
+// Próxima rotina sugerida: a seguinte à última rotina usada (na ordem da lista).
 export async function proximaRotina() {
   const rotinas = await listarRotinas();
   if (!rotinas.length) return null;
-  const ultimo = (await listarTreinos()).find(t => t.rotina_id && rotinas.some(r => r.id === t.rotina_id));
+  // Treino sem rotina ligada (ex.: importado do Hevy) conta pela rotina de mesmo nome
+  const nome = s => normalizar(s || '').trim();
+  const daRotina = t => (t.rotina_id && rotinas.findIndex(r => r.id === t.rotina_id) + 1) || rotinas.findIndex(r => nome(r.nome) === nome(t.nome)) + 1;
+  const ultimo = (await listarTreinos()).find(daRotina);
   if (!ultimo) return rotinas[0];
-  const i = rotinas.findIndex(r => r.id === ultimo.rotina_id);
+  const i = daRotina(ultimo) - 1;
   return rotinas[(i + 1) % rotinas.length];
 }

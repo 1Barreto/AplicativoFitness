@@ -4,7 +4,7 @@ import { DB } from './core/db.js';
 import { Auth } from './core/auth.js';
 import { Sync } from './core/sync.js';
 import { Modulos } from './core/modulos.js';
-import { Bus, debounce } from './core/util.js';
+import { Bus, debounce, dataInput } from './core/util.js';
 import { Icone, definirTitulo, toast } from './core/ui.js';
 import { som } from './core/som.js';
 import './modules/index.js';
@@ -97,6 +97,14 @@ async function iniciar() {
   const recarregar = debounce(() => { if (rotaAtual && rotaAtual.recarregar !== false) renderizar({ preservarRolagem: true }); }, 300);
   Bus.on('dados:alterados', ({ local }) => { if (!local) recarregar(); });
   Bus.on('auth:mudou', () => { if (rotaAtual && rotaAtual.recarregar !== false) renderizar({ preservarRolagem: true }); });
+  // App aberto em segundo plano de um dia para o outro (comum no iPhone): ao voltar,
+  // redesenha para "Hoje" e a dieta não continuarem no dia anterior.
+  let diaDaTela = dataInput();
+  addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || dataInput() === diaDaTela) return;
+    diaDaTela = dataInput();
+    if (rotaAtual && rotaAtual.recarregar !== false) renderizar({ preservarRolagem: true });
+  });
 
   // O áudio no iPhone só pode tocar depois de um toque do usuário.
   addEventListener('pointerdown', () => som.desbloquear(), { once: true, capture: true });
