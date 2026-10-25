@@ -6,7 +6,7 @@ import { esc, fmtNum, clone } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio } from '../../core/ui.js';
 import { pesoAtual } from '../corpo/dados.js';
 import {
-  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, salvarItem, excluirItem, novoItem,
+  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, salvarItem, excluirItem, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
   copiaAlimento, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS,
 } from './dados.js';
@@ -71,20 +71,20 @@ function blocoResumo(total, metas) {
 }
 
 // Calorias da semana (barras), com a linha da meta
-function cartaoSemana(semana, totais, metas, dia) {
+function cartaoSemana(semana, totais, metasDia, dia, tipos) {
   const valores = semana.map(d => totais[d].kcal);
-  const teto = Math.max(metas.kcal || 0, ...valores) * 1.1 || 1;
+  const metasK = semana.map(d => metasDia(d).kcal || 0);
+  const teto = Math.max(...metasK, ...valores) * 1.1 || 1;
   const comDados = valores.filter(v => v > 0);
   const media = comDados.length ? comDados.reduce((a, b) => a + b, 0) / comDados.length : 0;
   return `
     <section class="cartao dieta-semana">
       <div class="cartao-cab">${Icone.progresso}<h3>Semana</h3><span class="link-cab sutil">média ${fmtKcal(media)} kcal</span></div>
       <div class="semana-grafico">
-        ${metas.kcal ? `<i class="semana-meta" style="bottom:calc(24px + (100% - 24px) * ${(metas.kcal / teto).toFixed(3)})"><span>${fmtKcal(metas.kcal)}</span></i>` : ''}
         ${semana.map((d, k) => `
-          <button class="semana-barra ${d === dia ? 'ativo' : ''} ${metas.kcal && valores[k] > metas.kcal ? 'passou' : ''}" data-ir="${d}" title="${fmtKcal(valores[k])} kcal">
-            <span class="barra-area"><i style="height:${valores[k] / teto * 100}%"></i></span>
-            <small>${DIAS_SEMANA[dataDe(d).getDay()]}</small>
+          <button class="semana-barra ${d === dia ? 'ativo' : ''} ${metasK[k] && valores[k] > metasK[k] ? 'passou' : ''}" data-ir="${d}" title="${fmtKcal(valores[k])} kcal${metasK[k] ? ` de ${fmtKcal(metasK[k])}` : ''} · ${TIPOS_DIA[tipos[d].tipo]}">
+            <span class="barra-area"><i style="height:${valores[k] / teto * 100}%"></i>${metasK[k] ? `<em style="bottom:${(metasK[k] / teto * 100).toFixed(1)}%"></em>` : ''}</span>
+            <small>${DIAS_SEMANA[dataDe(d).getDay()]}</small><span class="tipo-mini ${tipos[d].tipo}">${tipos[d].tipo === 'treino' ? 'T' : 'off'}</span>
           </button>`).join('')}
       </div>
     </section>`;
@@ -95,7 +95,6 @@ async function telaDieta(el, _p, query) {
   definirTitulo('Dieta');
   const dia = /^\d{4}-\d{2}-\d{2}$/.test(query.dia || '') ? query.dia : hojeISO();
   const [config, itens, comRegistro] = await Promise.all([obterConfig(), itensDoDia(dia), diasComRegistro()]);
-  const metas = config.metas || {};
   const total = somar(itens);
   const refeicoes = [...config.refeicoes];
   const ids = new Set(refeicoes.map(r => r.id));
@@ -106,7 +105,11 @@ async function telaDieta(el, _p, query) {
   const d0 = dataDe(dia);
   const seg = somarDias(dia, -((d0.getDay() + 6) % 7));
   const semana = Array.from({ length: 7 }, (_, i) => somarDias(seg, i));
-  const totaisSemana = await totaisPorDia(semana);
+  const [totaisSemana, tipos] = await Promise.all([totaisPorDia(semana), tiposDosDias(semana)]);
+  const todasMetas = metasDe(config);
+  const metasDia = d => todasMetas[tipos[d].tipo] || {};
+  const tipoDia = tipos[dia];
+  const metas = metasDia(dia);
   const ir = d => { location.hash = d === hojeISO() ? '#/dieta' : `#/dieta?dia=${d}`; };
 
   el.classList.add('tela-dieta');
@@ -119,7 +122,7 @@ async function telaDieta(el, _p, query) {
       </div>
       <div class="semana">
         ${semana.map(d => `
-          <button class="semana-dia ${d === dia ? 'ativo' : ''} ${d === hojeISO() ? 'hoje' : ''} ${comRegistro.has(d) ? 'com' : ''}" data-ir="${d}">
+          <button class="semana-dia ${d === dia ? 'ativo' : ''} ${d === hojeISO() ? 'hoje' : ''} ${comRegistro.has(d) ? 'com' : ''} ${tipos[d].tipo}" data-ir="${d}" title="${TIPOS_DIA[tipos[d].tipo]}">
             <small>${DIAS_SEMANA[dataDe(d).getDay()]}</small><b>${dataDe(d).getDate()}</b><i></i>
           </button>`).join('')}
       </div>
@@ -127,14 +130,20 @@ async function telaDieta(el, _p, query) {
 
     <div class="dieta-grade">
       <div class="dieta-lateral">
-        <section class="cartao dieta-resumo">${blocoResumo(total, metas)}</section>
+        <section class="cartao dieta-resumo">
+          <div class="segmento tipo-dia" data-tipo-dia>
+            ${Object.entries(TIPOS_DIA).map(([k, nome]) => `<button data-t="${k}" class="${tipoDia.tipo === k ? 'ativo' : ''}">${k === 'treino' ? Icone.treino : Icone.hoje}<span>${nome}</span></button>`).join('')}
+          </div>
+          ${!tipoDia.manual && tipoDia.tipo === 'treino' ? '<p class="sutil pequeno tipo-auto">Marcado automaticamente: há treino registrado neste dia.</p>' : ''}
+          ${blocoResumo(total, metas)}
+        </section>
         <nav class="dieta-atalhos">
           <button class="chip" data-acao="metas">${Icone.medidor}<span>Metas</span></button>
           <a class="chip" href="#/dieta/alimentos">${Icone.dieta}<span>Meus alimentos</span></a>
           <a class="chip" href="#/dieta/refeicoes">${Icone.copiar}<span>Refeições</span></a>
           ${!itens.length ? `<button class="chip" data-acao="copiar-dia">${Icone.historico}<span>Copiar dia anterior</span></button>` : ''}
         </nav>
-        ${cartaoSemana(semana, totaisSemana, metas, dia)}
+        ${cartaoSemana(semana, totaisSemana, metasDia, dia, tipos)}
       </div>
 
       <div class="dieta-refeicoes">
@@ -165,9 +174,14 @@ async function telaDieta(el, _p, query) {
 
   const recarregar = () => telaDieta(el, _p, query);
   el.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
+  el.querySelector('[data-tipo-dia]').addEventListener('click', async e => {
+    const b = e.target.closest('[data-t]'); if (!b || (b.dataset.t === tipoDia.tipo && tipoDia.manual)) return;
+    await marcarTipoDia(dia, b.dataset.t);
+    recarregar();
+  });
   el.querySelectorAll('[data-acao=metas]').forEach(b => b.onclick = async () => {
     const peso = (await pesoAtual())?.valor;
-    const novas = await formularioMetas(metas, peso);
+    const novas = await formularioMetas(todasMetas, peso, tipoDia.tipo);
     if (novas) { await salvarConfig({ ...config, metas: novas }); toast('Metas salvas', 'sucesso'); recarregar(); }
   });
   el.querySelector('[data-acao=copiar-dia]')?.addEventListener('click', async () => {
@@ -388,13 +402,14 @@ async function telaRefeicaoSalva(el, { id }) {
 
 // ---------- Cartão na tela Hoje ----------
 async function cartaoDieta(el) {
-  const [config, itens] = await Promise.all([obterConfig(), itensDoDia(hojeISO())]);
-  const metas = config.metas || {};
+  const [config, itens, tipos] = await Promise.all([obterConfig(), itensDoDia(hojeISO()), tiposDosDias([hojeISO()])]);
+  const tipo = tipos[hojeISO()].tipo;
+  const metas = metasDe(config)[tipo] || {};
   const t = somar(itens);
   const resta = metas.kcal ? metas.kcal - t.kcal : null;
   el.innerHTML = `
     <a class="cartao cartao-dieta" href="#/dieta">
-      <div class="cartao-cab">${Icone.dieta}<h3>Dieta de hoje</h3></div>
+      <div class="cartao-cab">${Icone.dieta}<h3>Dieta de hoje</h3><span class="link-cab tipo-mini ${tipo}">${TIPOS_DIA[tipo]}</span></div>
       <div class="dieta-mini">
         <div class="anel-area mini">${anel(t.kcal, metas.kcal, { tamanho: 84, espessura: 12 })}
           <div class="anel-texto"><strong>${fmtKcal(t.kcal)}</strong><small>kcal</small></div></div>
@@ -409,7 +424,7 @@ async function cartaoDieta(el) {
 Modulos.registrar({
   id: 'dieta',
   aba: { rota: '/dieta', nome: 'Dieta', icone: Icone.dieta, ordem: 30 },
-  tabelas: [T.diario, T.alimentos, T.refeicoes, T.config],
+  tabelas: [T.diario, T.alimentos, T.refeicoes, T.config, T.dias],
   rotas: {
     '/dieta': telaDieta,
     '/dieta/alimentos': telaAlimentos,

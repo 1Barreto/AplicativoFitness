@@ -7,8 +7,9 @@
 
 import { DB } from '../../core/db.js';
 import { normalizar, dataInput } from '../../core/util.js';
+import { listarTreinos } from '../treino/dados.js';
 
-export const T = { diario: 'diario', alimentos: 'alimentos', refeicoes: 'refeicoes', config: 'dieta_config' };
+export const T = { diario: 'diario', alimentos: 'alimentos', refeicoes: 'refeicoes', config: 'dieta_config', dias: 'dieta_dias' };
 
 export const NUTRIENTES = [
   // chave, rótulo, unidade
@@ -31,10 +32,38 @@ export async function obterConfig() {
   if (l[0]) return l[0];
   return {
     refeicoes: REFEICOES_PADRAO.map((nome, i) => ({ id: `r${i + 1}`, nome })),
-    metas: { kcal: null, p: null, c: null, g: null },
+    metas: { treino: {}, off: {} },
   };
 }
 export const salvarConfig = c => DB.salvar(T.config, c);
+
+// ---------- Metas: dia de treino x dia off ----------
+export const TIPOS_DIA = { treino: 'Dia de treino', off: 'Dia off' };
+
+// Metas por tipo de dia. Versões antigas tinham uma meta só ({kcal, p, c, g}).
+export function metasDe(config) {
+  const m = config.metas || {};
+  if (!m.treino && !m.off) return { treino: { ...m }, off: { ...m } };
+  return { treino: m.treino || {}, off: m.off || {} };
+}
+
+// Tipo de cada dia: o que foi marcado; sem marcação, "treino" se houve
+// treino registrado naquele dia, senão "off".
+export async function tiposDosDias(dias) {
+  const [marcas, treinos] = await Promise.all([DB.todos(T.dias), listarTreinos()]);
+  const marcado = new Map();
+  marcas.sort((a, b) => (a.updated_at || '').localeCompare(b.updated_at || '')).forEach(m => marcado.set(m.dia, m));
+  const comTreino = new Set(treinos.map(t => dataInput(t.inicio)));
+  return Object.fromEntries(dias.map(d => [d, {
+    tipo: marcado.get(d)?.tipo || (comTreino.has(d) ? 'treino' : 'off'),
+    manual: !!marcado.get(d)?.tipo,
+    registro: marcado.get(d) || null,
+  }]));
+}
+export async function marcarTipoDia(dia, tipo) {
+  const atual = (await tiposDosDias([dia]))[dia].registro;
+  return DB.salvar(T.dias, { ...(atual || {}), dia, tipo });
+}
 
 // ---------- Diário ----------
 export const hojeISO = () => dataInput();

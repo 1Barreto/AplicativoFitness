@@ -298,22 +298,41 @@ export function formularioAlimento(a = null, { base = null } = {}) {
   });
 }
 
-// Metas diárias. Retorna as metas ou undefined.
-export function formularioMetas(metas = {}, peso = null) {
+// Metas diárias por tipo de dia ({ treino, off }). Retorna as metas ou undefined.
+export function formularioMetas(metas = {}, peso = null, tipoInicial = 'treino') {
+  const estado = { treino: { ...(metas.treino || {}) }, off: { ...(metas.off || {}) } };
+  let tipo = tipoInicial;
+  const CAMPOS = ['kcal', 'p', 'c', 'g'];
   return folha({
     titulo: 'Metas diárias',
     conteudo: (corpo) => {
       corpo.innerHTML = `
         <div class="form">
-          <label>Calorias (kcal)<input class="campo" name="kcal" inputmode="numeric" value="${fmtNum(metas.kcal)}" placeholder="Ex.: 2800" autofocus></label>
-          <div class="grade-campos metas-campos">
-            ${[['p', 'Proteína'], ['c', 'Carboidratos'], ['g', 'Gorduras']].map(([k, r]) => `<label>${r} (g)<input class="campo" name="${k}" inputmode="decimal" value="${fmtNum(metas[k])}"></label>`).join('')}
+          <div class="segmento" data-tipos>
+            <button type="button" data-t="treino">${Icone.treino}<span>Dia de treino</span></button>
+            <button type="button" data-t="off">${Icone.hoje}<span>Dia off</span></button>
           </div>
+          <label>Calorias (kcal)<input class="campo" name="kcal" inputmode="numeric" placeholder="Ex.: 2800"></label>
+          <div class="grade-campos metas-campos">
+            ${[['p', 'Proteína'], ['c', 'Carboidratos'], ['g', 'Gorduras']].map(([k, r]) => `<label>${r} (g)<input class="campo" name="${k}" inputmode="decimal"></label>`).join('')}
+          </div>
+          <button type="button" class="link-btn" data-copiar></button>
           <div class="metas-info" data-info></div>
+          <p class="sutil pequeno">No diário, marque cada dia como treino ou off. Sem marcação, o dia conta como treino quando há um treino registrado nele.</p>
         </div>`;
       const info = corpo.querySelector('[data-info]');
+      const campo = k => corpo.querySelector(`[name=${k}]`);
+      const v = k => num(campo(k).value) || 0;
+      const guardar = () => { CAMPOS.forEach(k => { const x = num(campo(k).value); estado[tipo][k] = x && x > 0 ? x : null; }); };
+      const preencher = () => {
+        CAMPOS.forEach(k => { campo(k).value = fmtNum(estado[tipo][k]); });
+        corpo.querySelectorAll('[data-t]').forEach(b => b.classList.toggle('ativo', b.dataset.t === tipo));
+        const outro = tipo === 'treino' ? 'off' : 'treino';
+        corpo.querySelector('[data-copiar]').innerHTML = `${Icone.copiar}<span>Copiar do ${tipo === 'treino' ? 'dia off' : 'dia de treino'}</span>`;
+        corpo.querySelector('[data-copiar]').hidden = !CAMPOS.some(k => estado[outro][k]);
+        atualizar();
+      };
       const atualizar = () => {
-        const v = k => num(corpo.querySelector(`[name=${k}]`).value) || 0;
         const kcalMacros = v('p') * 4 + v('c') * 4 + v('g') * 9;
         const linhas = [];
         if (kcalMacros) {
@@ -322,19 +341,21 @@ export function formularioMetas(metas = {}, peso = null) {
         }
         if (peso && (v('p') || v('g') || v('c'))) linhas.push(`Com ${fmtNum(peso)} kg: proteína ${fmtNum(Math.round(v('p') / peso * 10) / 10)} g/kg · carbo ${fmtNum(Math.round(v('c') / peso * 10) / 10)} g/kg · gordura ${fmtNum(Math.round(v('g') / peso * 10) / 10)} g/kg`);
         info.innerHTML = linhas.map(l => `<p class="sutil pequeno">${l}</p>`).join('');
-        info.querySelector('[data-usar]')?.addEventListener('click', () => { corpo.querySelector('[name=kcal]').value = Math.round(kcalMacros); atualizar(); });
+        info.querySelector('[data-usar]')?.addEventListener('click', () => { campo('kcal').value = Math.round(kcalMacros); atualizar(); });
       };
+      corpo.querySelector('[data-tipos]').addEventListener('click', e => {
+        const b = e.target.closest('[data-t]'); if (!b || b.dataset.t === tipo) return;
+        guardar(); tipo = b.dataset.t; preencher(); campo('kcal').focus();
+      });
+      corpo.querySelector('[data-copiar]').onclick = () => { estado[tipo] = { ...estado[tipo === 'treino' ? 'off' : 'treino'] }; preencher(); };
       corpo.addEventListener('input', atualizar);
-      atualizar();
+      corpo._guardar = guardar;
+      preencher();
+      setTimeout(() => campo('kcal').focus(), 60);
     },
     acoes: [
       { texto: 'Cancelar', classe: 'btn-secundario', valor: undefined },
-      {
-        texto: 'Salvar', classe: 'btn-primario', acao: (c) => {
-          const v = k => { const x = num(c.querySelector(`[name=${k}]`).value); return x && x > 0 ? x : null; };
-          return { kcal: v('kcal'), p: v('p'), c: v('c'), g: v('g') };
-        },
-      },
+      { texto: 'Salvar', classe: 'btn-primario', acao: (c) => { c._guardar(); return estado; } },
     ],
   });
 }
