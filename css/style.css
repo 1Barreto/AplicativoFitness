@@ -1191,5 +1191,8 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 .refeicao.planejada .refeicao-itens strong, .refeicao.planejada .refeicao-itens b { color: var(--texto-2); }
 .hora-pill.atrasada { background: rgba(var(--s-rgb), .16); color: var(--s); }
 @media (max-width: 899px) { .estado-ref { display: none; } }
-.proxima-acoes:has([data-acao=feita]) { grid-template-columns: 1fr auto; }
-.proxima-acoes [data-acao=feita] { white-space: nowrap; }
+.cartao-proxima.so-info { color: inherit; text-decoration: none; }
+.cartao-proxima.so-info .proxima-ultima ul { display: flex; flex-direction: column; }
+.proxima-ultima li { justify-content: flex-start; }
+.proxima-ultima li b { min-width: 64px; }
+.hora-pill { white-space: nowrap; flex: none; }

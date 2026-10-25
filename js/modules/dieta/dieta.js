@@ -467,30 +467,24 @@ async function cartaoProximaRefeicao(el) {
   const lista = mostrar ? `
     <div class="proxima-ultima">
       <small>${planejados.length ? 'Planejado' : `Última vez · ${rotuloDia(ultima.dia).toLowerCase()}`} · ${fmtKcal(tm.kcal)} kcal · P ${fmtG(tm.p)} · C ${fmtG(tm.c)} · G ${fmtG(tm.g)}</small>
-      <ul>${mostrar.slice(0, 5).map(i => `<li><span>${esc(i.alimento.nome.split(',').slice(0, 2).join(','))}</span><b>${fmtQtd(i)}</b></li>`).join('')}${mostrar.length > 5 ? `<li class="sutil">+ ${mostrar.length - 5} itens</li>` : ''}</ul>
+      <ul>${mostrar.slice(0, 6).map(i => `<li><b>${fmtQtd(i)}</b><span>${esc(i.alimento.nome.split(',').slice(0, 2).join(','))}</span></li>`).join('')}${mostrar.length > 6 ? `<li class="sutil">+ ${mostrar.length - 6} itens</li>` : ''}</ul>
     </div>` : '';
-  const acoes = planejados.length
-    ? `<button class="btn btn-primario" data-acao="feita">${Icone.check}<span>Marcar como feita</span></button>
-       <a class="btn btn-secundario" href="#/dieta">${Icone.editar}<span>Editar</span></a>`
-    : `${ultima ? `<button class="btn btn-primario" data-acao="repetir">${Icone.copiar}<span>Repetir</span></button>` : ''}
+  // Planejada: só as informações (marcar como feita fica na aba Dieta)
+  const acoes = planejados.length ? '' : `${ultima ? `<button class="btn btn-primario" data-acao="repetir">${Icone.copiar}<span>Repetir</span></button>` : ''}
        <button class="btn ${ultima ? 'btn-secundario' : 'btn-primario'}" data-acao="add">${Icone.mais}<span>${ultima ? 'Adicionar' : 'Adicionar alimento'}</span></button>`;
+  const tag = planejados.length ? 'a' : 'section';
   el.innerHTML = `
-    <section class="cartao cartao-proxima">
+    <${tag} class="cartao cartao-proxima ${planejados.length ? 'so-info' : ''}" ${planejados.length ? 'href="#/dieta"' : ''}>
       <div class="cartao-cab">${Icone.dieta}<h3>Próxima refeição</h3>${prox.horario ? `<span class="link-cab hora-pill ${atrasada ? 'atrasada' : ''}">${Icone.timer}${atrasada ? 'Atrasada · ' : ''}${esc(prox.horario)}</span>` : ''}</div>
       <div class="proxima-corpo">
         <div class="proxima-info">
           <p class="proxima-nome">${esc(prox.nome)}</p>
-          <p class="sutil pequeno">${atrasada && planejados.length ? 'Ainda não marcada como feita. ' : ''}${resta == null ? `${fmtKcal(t.kcal)} kcal consumidas hoje` : resta >= 0 ? `Faltam <b>${fmtKcal(resta)} kcal</b> para a meta de hoje` : `${fmtKcal(-resta)} kcal acima da meta de hoje`}</p>
+          <p class="sutil pequeno">${resta == null ? `${fmtKcal(t.kcal)} kcal consumidas hoje` : resta >= 0 ? `Faltam <b>${fmtKcal(resta)} kcal</b> para a meta de hoje` : `${fmtKcal(-resta)} kcal acima da meta de hoje`}</p>
           ${lista}
         </div>
-        <div class="proxima-acoes">${acoes}</div>
+        ${acoes ? `<div class="proxima-acoes">${acoes}</div>` : ''}
       </div>
-    </section>`;
-  el.querySelector('[data-acao=feita]')?.addEventListener('click', async () => {
-    await marcarRefeicaoFeita(planejados, true);
-    toast(`${esc(prox.nome)} feita`, 'sucesso');
-    redesenhar();
-  });
+    </${tag}>`;
   el.querySelector('[data-acao=add]')?.addEventListener('click', async () => { if (await adicionarAlimentos({ dia: hoje, refeicao: prox })) redesenhar(); });
   el.querySelector('[data-acao=repetir]')?.addEventListener('click', async () => {
     let ordem = Date.now();
