@@ -93,8 +93,12 @@ export async function tiposDosDias(dias) {
     return [d, { tipo: CICLO[(pos + 3) % 3], manual: false, origem: 'ciclo', registro: null }];
   }));
 }
+// Marca o tipo de um dia e recomeça o ciclo a partir dele: marcações de
+// dias seguintes (feitas antes) são removidas, para não interferir.
 export async function marcarTipoDia(dia, tipo) {
-  const atual = (await tiposDosDias([dia]))[dia].registro;
+  const marcas = await DB.todos(T.dias);
+  for (const m of marcas) if (m.dia > dia) await DB.excluir(T.dias, m.id);
+  const atual = marcas.filter(m => m.dia === dia).sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''))[0];
   return DB.salvar(T.dias, { ...(atual || {}), dia, tipo });
 }
 
