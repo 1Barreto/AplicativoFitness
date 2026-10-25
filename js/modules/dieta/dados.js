@@ -197,6 +197,37 @@ export function carregarTBCA() {
   return tbca;
 }
 
+// ---------- TACO (UNICAMP) e IBGE (POF 2008-2009) ----------
+// Tabelas públicas brasileiras complementares; IBGE traz alimentos já preparados
+// (cozido, frito, grelhado...) com o sal do preparo.
+let tabelas = null;
+export function carregarTabelas() {
+  if (!tabelas) {
+    tabelas = fetch(new URL('./tabelas.json', import.meta.url)).then(r => {
+      if (!r.ok) throw new Error('Não foi possível carregar as tabelas TACO/IBGE');
+      return r.json();
+    }).then(d => [
+      ...d.taco.map(([ref, nome, grupo, kcal, p, c, g, fibra, sodio]) => ({
+        fonte: 'taco', ref, nome, grupo: d.grupos[grupo], n: { kcal, p, c, g, fibra, sodio },
+      })),
+      ...d.ibge.map(([ref, nome, grupo, kcal, p, c, g, fibra, sodio, acucar, saturada]) => ({
+        fonte: 'ibge', ref, nome, grupo: d.grupos[grupo], n: { kcal, p, c, g, fibra, sodio, acucar, saturada },
+      })),
+    ]).catch(e => { tabelas = null; throw e; });
+  }
+  return tabelas;
+}
+
+// Todas as tabelas de referência juntas, para a busca
+let base = null;
+export function carregarBase() {
+  if (!base) {
+    base = Promise.all([carregarTBCA(), carregarTabelas()]).then(([a, b]) => [...a, ...b])
+      .catch(e => { base = null; throw e; });
+  }
+  return base;
+}
+
 export async function alimentoTBCA(codigo) {
   return (await carregarTBCA()).find(a => a.ref === codigo) || null;
 }
@@ -232,6 +263,7 @@ export function buscarAlimentos(lista, texto, limite = 80) {
     pontos += a.nome.replace(/\(.*?\)/g, '').length / 25 + (a.nome.match(/ c\//g) || []).length * 3;
     if (/\b(galinha|vaca)\b/.test(a.nome)) pontos -= 1.5;
     if (/\b(cru|crua|in natura|cozid[oa]|grelhad[oa])\b/.test(a.nome)) pontos -= 1;
+    if (a.fonte === 'taco') pontos += 0.5; else if (a.fonte === 'ibge') pontos += 1;
     res.push([pontos, a]);
   }
   return res.sort((x, y) => x[0] - y[0]).slice(0, limite).map(x => x[1]);

@@ -4,7 +4,7 @@
 import { folha, toast, Icone } from '../../core/ui.js';
 import { esc, num, fmtNum, debounce } from '../../core/util.js';
 import {
-  carregarTBCA, buscarAlimentos, buscarOFF, listarMeusAlimentos, listarRefeicoesSalvas, recentes, salvarAlimento,
+  carregarBase, buscarAlimentos, buscarOFF, listarMeusAlimentos, listarRefeicoesSalvas, recentes, salvarAlimento,
   calcular, somar, fmtKcal, fmtG, NUTRIENTES,
 } from './dados.js';
 
@@ -29,8 +29,10 @@ function descricaoAlimento(a) {
   return `100 g · ${fmtKcal(a.n.kcal)} kcal`;
 }
 
+const FONTES = { tbca: 'TBCA-USP', taco: 'TACO-UNICAMP', ibge: 'IBGE · POF 2008-2009 (preparado)' };
+
 function itemAlimento(a, i) {
-  const origem = { tbca: '<span class="selo-fonte">TBCA</span>', off: '<span class="selo-fonte marca">Marca</span>' }[a.fonte] || '<span class="selo-fonte meu">Meu</span>';
+  const origem = { tbca: '<span class="selo-fonte">TBCA</span>', taco: '<span class="selo-fonte">TACO</span>', ibge: '<span class="selo-fonte">IBGE</span>', off: '<span class="selo-fonte marca">Marca</span>' }[a.fonte] || '<span class="selo-fonte meu">Meu</span>';
   return `
     <button class="item-alimento" data-i="${i}">
       <span class="item-texto"><strong>${esc(a.nome)}${a.marca ? ` <small class="marca-alim">${esc(a.marca)}</small>` : ''}</strong>
@@ -76,15 +78,15 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
         if (texto) {
           el.innerHTML = '<p class="sutil centro lista-vazia">Buscando…</p>';
           try {
-            const [meus, tbca] = await Promise.all([listarMeusAlimentos(), carregarTBCA()]);
+            const [meus, tabela] = await Promise.all([listarMeusAlimentos(), carregarBase()]);
             if (campo.value.trim() !== texto) return;
-            const locais = [...buscarAlimentos(meus, texto, 20), ...buscarAlimentos(tbca, texto, 60)];
-            mostrar(locais, 'Nada na TBCA nem nos seus alimentos.', true);
+            const locais = [...buscarAlimentos(meus, texto, 20), ...buscarAlimentos(tabela, texto, 80)];
+            mostrar(locais, 'Nada nas tabelas (TBCA, TACO, IBGE) nem nos seus alimentos.', true);
             marcas(texto, locais);
           } catch (e) { el.innerHTML = `<p class="erro centro">${esc(e.message)}</p>`; }
           return;
         }
-        if (aba === 'recentes') mostrar(await recentes(), 'Os alimentos que você registrar aparecem aqui. Use a busca para encontrar na TBCA.');
+        if (aba === 'recentes') mostrar(await recentes(), 'Os alimentos que você registrar aparecem aqui. Use a busca para encontrar nas tabelas.');
         else if (aba === 'meus') mostrar(await listarMeusAlimentos(), 'Nenhum alimento personalizado ainda.', true);
         else {
           const refs = await listarRefeicoesSalvas();
@@ -173,7 +175,7 @@ export function escolherQuantidade(alimento, { gramas = null, porcao = null, ref
       corpo.innerHTML = `
         <div class="qtd-cab">
           <h3>${esc(alimento.nome)}</h3>
-          <p class="sutil pequeno">${alimento.fonte === 'tbca' ? `TBCA-USP · ${esc(alimento.grupo || '')} · ${esc(alimento.ref)}`
+          <p class="sutil pequeno">${FONTES[alimento.fonte] ? [FONTES[alimento.fonte], alimento.grupo].filter(Boolean).map(esc).join(' · ')
             : alimento.fonte === 'off' ? [alimento.marca, alimento.detalhe, 'Open Food Facts'].filter(Boolean).map(esc).join(' · ')
             : esc(alimento.marca || 'Alimento personalizado')}</p>
         </div>

@@ -268,7 +268,7 @@ async function telaAlimentos(el) {
   const lista = await listarMeusAlimentos();
   el.innerHTML = `
     <button class="btn btn-primario btn-bloco" data-acao="novo">${Icone.mais}<span>Criar alimento</span></button>
-    <p class="sutil pequeno">Cadastre o que não está na TBCA (suplementos, marcas, receitas suas). Para ajustar um alimento da TBCA, abra-o na busca e toque em "Personalizar".</p>
+    <p class="sutil pequeno">Cadastre o que não está nas tabelas (suplementos, marcas, receitas suas). Para ajustar um alimento das tabelas, abra-o na busca e toque em "Personalizar".</p>
     ${lista.length ? `<div class="lista-exercicios">${lista.map(a => `
       <button class="item-exercicio" data-id="${a.id}">
         <span class="item-texto"><strong>${esc(a.nome)}${a.marca ? ` <small class="marca-alim">${esc(a.marca)}</small>` : ''}</strong>

@@ -131,4 +131,5 @@ Por padrão cada exercício mostra um desenho do [Everkinetic](https://github.co
 Aba **Dieta**: diário do dia com calorias, macros e refeições; busca de alimentos; alimentos personalizados; refeições salvas; metas.
 
 - Alimentos: **TBCA** (Tabela Brasileira de Composição de Alimentos, USP/FoRC), 5.668 itens, em `js/modules/dieta/tbca.json` (valores por 100 g; carboidratos = carboidrato disponível). Gerado por `tools/gerar-tbca.py` a partir da raspagem pública em github.com/resen-dev/web-scraping-tbca.
+- Também na busca: **TACO** 4ª ed. (NEPA/UNICAMP, 591 itens) e **IBGE** POF 2008-2009 (1.962 alimentos já preparados: cozido, frito, grelhado..., com o sal do preparo), em `js/modules/dieta/tabelas.json` (carboidrato total). Gerado por `tools/gerar-tabelas.py` (CSVs de github.com/raulfdm/taco-api e SQL de github.com/renandspedrosa/tabela-taco-api).
 - Tabelas sincronizadas: `diario`, `alimentos`, `refeicoes`, `dieta_config` (já no `supabase/schema.sql`).
