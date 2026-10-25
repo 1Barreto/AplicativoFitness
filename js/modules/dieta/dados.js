@@ -264,6 +264,8 @@ export function buscarAlimentos(lista, texto, limite = 80) {
     if (/\b(galinha|vaca)\b/.test(a.nome)) pontos -= 1.5;
     if (/\b(cru|crua|in natura|cozid[oa]|grelhad[oa])\b/.test(a.nome)) pontos -= 1;
     if (a.fonte === 'taco') pontos += 0.5; else if (a.fonte === 'ibge') pontos += 1;
+    // Digitou a marca: produto daquela marca vem antes
+    if (a.marca && opcoes.some(alts => palavras(a.marca).some(w => alts.some(t => w.startsWith(t))))) pontos -= 4;
     res.push([pontos, a]);
   }
   return res.sort((x, y) => x[0] - y[0]).slice(0, limite).map(x => x[1]);

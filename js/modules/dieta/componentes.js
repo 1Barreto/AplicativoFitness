@@ -32,7 +32,7 @@ function descricaoAlimento(a) {
 const FONTES = { tbca: 'TBCA-USP', taco: 'TACO-UNICAMP', ibge: 'IBGE · POF 2008-2009 (preparado)' };
 
 function itemAlimento(a, i) {
-  const origem = { tbca: '<span class="selo-fonte">TBCA</span>', taco: '<span class="selo-fonte">TACO</span>', ibge: '<span class="selo-fonte">IBGE</span>', off: '<span class="selo-fonte marca">Marca</span>' }[a.fonte] || '<span class="selo-fonte meu">Meu</span>';
+  const origem = { tbca: '<span class="selo-fonte">TBCA</span>', taco: '<span class="selo-fonte">TACO</span>', ibge: '<span class="selo-fonte">IBGE</span>', off: '<span class="selo-fonte selo-marca">Marca</span>' }[a.fonte] || '<span class="selo-fonte meu">Meu</span>';
   return `
     <button class="item-alimento" data-i="${i}">
       <span class="item-texto"><strong>${esc(a.nome)}${a.marca ? ` <small class="marca-alim">${esc(a.marca)}</small>` : ''}</strong>
@@ -80,9 +80,9 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
           try {
             const [meus, tabela] = await Promise.all([listarMeusAlimentos(), carregarBase()]);
             if (campo.value.trim() !== texto) return;
-            const locais = [...buscarAlimentos(meus, texto, 20), ...buscarAlimentos(tabela, texto, 80)];
-            mostrar(locais, 'Nada nas tabelas (TBCA, TACO, IBGE) nem nos seus alimentos.', true);
-            marcas(texto, locais);
+            const meusRes = buscarAlimentos(meus, texto, 20), tabRes = buscarAlimentos(tabela, texto, 80);
+            mostrar([...meusRes, ...tabRes], 'Nada nas tabelas (TBCA, TACO, IBGE) nem nos seus alimentos.', true);
+            marcas(texto, meusRes, tabRes);
           } catch (e) { el.innerHTML = `<p class="erro centro">${esc(e.message)}</p>`; }
           return;
         }
@@ -102,22 +102,31 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
 
       // Produtos com marca (Open Food Facts): busca online depois da local
       let esperaMarcas = null;
-      const marcas = (texto, locais) => {
+      // Produtos que casam com o texto entram na lista principal, ordenados junto
+      // com as tabelas; os demais ficam na seção "Marcas" abaixo.
+      const marcas = (texto, meusRes, tabRes) => {
         clearTimeout(esperaMarcas);
         if (texto.length < 3) return;
+        const cab = `<div class="secao-lista">${Icone.busca}<span>Marcas · Open Food Facts</span></div>`;
         const area = document.createElement('div');
         area.className = 'secao-marcas';
-        area.innerHTML = `<div class="secao-lista">${Icone.busca}<span>Marcas · Open Food Facts</span></div><p class="sutil centro lista-vazia">Buscando produtos de mercado…</p>`;
+        area.innerHTML = `${cab}<p class="sutil centro lista-vazia">Buscando produtos de mercado…</p>`;
         el.querySelector('.item-criar')?.before(area);
         esperaMarcas = setTimeout(async () => {
           try {
             const res = await buscarOFF(texto);
             if (campo.value.trim() !== texto) return;
-            const ini = locais.length;
-            lista = [...locais, ...res];
-            area.innerHTML = res.length
-              ? `<div class="secao-lista">${Icone.busca}<span>Marcas · Open Food Facts</span></div>${res.map((a, k) => itemAlimento(a, ini + k)).join('')}`
-              : `<div class="secao-lista">${Icone.busca}<span>Marcas · Open Food Facts</span></div><p class="sutil centro lista-vazia">Nenhum produto com esse nome. Tente a marca + produto (ex.: "Nestlé Ninho") ou o código de barras.</p>`;
+            const casam = new Set(buscarAlimentos(res, texto, res.length));
+            const principal = [...meusRes, ...buscarAlimentos([...tabRes, ...casam], texto, 100)];
+            const resto = res.filter(a => !casam.has(a));
+            const topo = el.scrollTop;
+            mostrar(principal.length ? principal : [], 'Nada nas tabelas (TBCA, TACO, IBGE) nem nos seus alimentos.', true);
+            lista = [...principal, ...resto];
+            area.innerHTML = resto.length
+              ? `${cab}${resto.map((a, k) => itemAlimento(a, principal.length + k)).join('')}`
+              : casam.size ? '' : `${cab}<p class="sutil centro lista-vazia">Nenhum produto com esse nome. Tente a marca + produto (ex.: "Nestlé Ninho") ou o código de barras.</p>`;
+            el.querySelector('.item-criar')?.before(area);
+            el.scrollTop = topo;
           } catch (e) {
             if (campo.value.trim() !== texto) return;
             area.querySelector('.lista-vazia').textContent = navigator.onLine === false ? 'Sem internet: a busca de marcas precisa de conexão.' : 'Não foi possível buscar marcas agora. Tente de novo em instantes.';
