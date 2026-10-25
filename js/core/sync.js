@@ -85,24 +85,35 @@ async function baixar(cliente, userId) {
   }
 }
 
-async function executar() {
+// Se o servidor não responder, a sincronização vira "Erro" em vez de ficar
+// "Sincronizando" para sempre.
+const LIMITE_MS = 90_000;
+const comLimite = p => Promise.race([p, new Promise((_, erro) => setTimeout(() => erro(new Error('O servidor demorou demais para responder. Toque para tentar de novo.')), LIMITE_MS))]);
+
+// silenciosa: verificações automáticas (a cada minuto, ao voltar para o app)
+// só mostram "Sincronizando" quando há algo para enviar.
+async function executar({ silenciosa = false } = {}) {
   const cliente = Auth.cliente();
   const usuario = Auth.usuario();
   if (!cliente || !usuario) { definirEstado('local'); return; }
   if (!navigator.onLine) { definirEstado('offline'); return; }
-  definirEstado('sincronizando');
+  if (!silenciosa || await DB.contarPendentes()) definirEstado('sincronizando');
   try {
-    await enviar(cliente, usuario.id);
-    await baixar(cliente, usuario.id);
-    await enviar(cliente, usuario.id); // o que mudou durante o download
+    await comLimite((async () => {
+      await enviar(cliente, usuario.id);
+      await baixar(cliente, usuario.id);
+      await enviar(cliente, usuario.id); // o que mudou durante o download
+    })());
     ultimaSync = new Date().toISOString();
     await DB.meta.definir('ultimaSync', ultimaSync);
-    await atualizarEstado();
+    await concluir();
   } catch (e) {
     console.error('Erro de sincronização', e);
     definirEstado(navigator.onLine ? 'erro' : 'offline', e.message || String(e));
   }
 }
+// estado pode ter ficado como estava numa verificação silenciosa
+async function concluir() { if (estado === 'sincronizando') estado = ''; await atualizarEstado(); }
 
 async function atualizarEstado() {
   if (estado === 'sincronizando') return;
@@ -120,8 +131,8 @@ export const Sync = {
 
   info: () => ({ estado, erro: ultimoErro, ultimaSync, logado: !!Auth.usuario() }),
 
-  sincronizar() {
-    if (!emAndamento) emAndamento = executar().finally(() => { emAndamento = null; });
+  sincronizar(opcoes) {
+    if (!emAndamento) emAndamento = executar(opcoes).finally(() => { emAndamento = null; });
     return emAndamento;
   },
 
@@ -138,8 +149,8 @@ export const Sync = {
     });
     addEventListener('online', () => Sync.sincronizar());
     addEventListener('offline', () => atualizarEstado());
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') Sync.sincronizar(); });
-    setInterval(() => { if (document.visibilityState === 'visible') Sync.sincronizar(); }, 60_000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') Sync.sincronizar({ silenciosa: true }); });
+    setInterval(() => { if (document.visibilityState === 'visible') Sync.sincronizar({ silenciosa: true }); }, 60_000);
     await atualizarEstado();
   },
 };
