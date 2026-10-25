@@ -438,6 +438,10 @@ async function telaRefeicaoSalva(el, { id }) {
   desenhar();
 }
 
+// Nome resumido: sem parênteses e só as duas primeiras palavras
+// ("Queijo, muçarela (média de...)" -> "Queijo, muçarela")
+const nomeCurto = n => n.replace(/\s*\(.*?\)/g, '').trim().split(/\s+/).slice(0, 2).join(' ').replace(/[,;.]$/, '') || n;
+
 // ---------- Cartão "Próxima refeição" (primeiro da tela Hoje) ----------
 // Mostra a primeira refeição ainda não feita. Já planejada: um toque marca como
 // feita. Vazia: repetir a última vez ou adicionar.
@@ -467,7 +471,7 @@ async function cartaoProximaRefeicao(el) {
   const lista = mostrar ? `
     <div class="proxima-ultima">
       <small>${planejados.length ? 'Planejado' : `Última vez · ${rotuloDia(ultima.dia).toLowerCase()}`} · ${fmtKcal(tm.kcal)} kcal · P ${fmtG(tm.p)} · C ${fmtG(tm.c)} · G ${fmtG(tm.g)}</small>
-      <ul>${mostrar.slice(0, 6).map(i => `<li><b>${fmtQtd(i)}</b><span>${esc(i.alimento.nome.split(',').slice(0, 2).join(','))}</span></li>`).join('')}${mostrar.length > 6 ? `<li class="sutil">+ ${mostrar.length - 6} itens</li>` : ''}</ul>
+      <ul>${mostrar.slice(0, 6).map(i => `<li><b>${fmtQtd(i)}</b><span>${esc(nomeCurto(i.alimento.nome))}</span></li>`).join('')}${mostrar.length > 6 ? `<li class="sutil">+ ${mostrar.length - 6} itens</li>` : ''}</ul>
     </div>` : '';
   // Planejada: só as informações (marcar como feita fica na aba Dieta)
   const acoes = planejados.length ? '' : `${ultima ? `<button class="btn btn-primario" data-acao="repetir">${Icone.copiar}<span>Repetir</span></button>` : ''}

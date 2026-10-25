@@ -1206,3 +1206,7 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 }
 .cartao-proxima .cartao-cab h3 { white-space: nowrap; }
 @media (max-width: 420px) { .cartao-proxima .hora-pill { font-size: 12px; padding: 3px 8px; } }
+/* Próxima refeição: quantidade e alimento em colunas alinhadas */
+.cartao-proxima .proxima-ultima ul { display: grid !important; grid-template-columns: max-content minmax(0, 1fr); column-gap: 14px; row-gap: 4px; }
+.cartao-proxima .proxima-ultima li { display: contents; }
+.cartao-proxima .proxima-ultima li.sutil { display: block; grid-column: 1 / -1; }
