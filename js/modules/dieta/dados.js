@@ -37,17 +37,37 @@ export async function obterConfig() {
 }
 export const salvarConfig = c => DB.salvar(T.config, c);
 
-// Próxima refeição de hoje: a primeira sem registro depois da última registrada.
-// Sem nada registrado ainda, usa o horário (a primeira que não passou há mais de 1h30).
-export function proximaRefeicao(refeicoes, itensHoje, agora = new Date()) {
-  const comItens = new Set(itensHoje.map(i => i.refeicao));
-  let ultima = -1;
-  refeicoes.forEach((r, i) => { if (comItens.has(r.id)) ultima = i; });
-  if (ultima >= 0) return refeicoes.slice(ultima + 1).find(r => !comItens.has(r.id)) || null;
-  const min = agora.getHours() * 60 + agora.getMinutes() - 90;
-  const emMin = h => { const [a, b] = String(h || '').split(':').map(Number); return Number.isFinite(a) ? a * 60 + (b || 0) : null; };
-  return refeicoes.find(r => emMin(r.horario) == null || emMin(r.horario) >= min) || refeicoes[refeicoes.length - 1] || null;
+// Refeição feita x planejada. Cada item do diário guarda "feito"; itens de
+// dias anteriores sem a marca (registrados antes dela existir) contam como feitos.
+export const itemFeito = (i, hoje = hojeISO()) => i.feito ?? i.dia < hoje;
+export const refeicaoFeita = (lista, hoje) => lista.length > 0 && lista.every(i => itemFeito(i, hoje));
+export const consumidos = (itens, hoje) => itens.filter(i => itemFeito(i, hoje));
+export async function marcarRefeicaoFeita(lista, feito) {
+  for (const i of lista) await DB.salvar(T.diario, { ...i, feito });
 }
+
+const emMin = h => { const [a, b] = String(h || '').split(':').map(Number); return Number.isFinite(a) ? a * 60 + (b || 0) : null; };
+const minAgora = (agora = new Date()) => agora.getHours() * 60 + agora.getMinutes();
+
+// Próxima refeição de hoje: a primeira não feita depois da última feita.
+// Refeições vazias antes de uma planejada são puladas.
+// Nenhuma feita ainda: usa o horário (a primeira que não passou há mais de 1h30;
+// se alguma anterior ainda tiver itens planejados, ela vem antes).
+export function proximaRefeicao(refeicoes, itensHoje, agora = new Date()) {
+  const feita = r => refeicaoFeita(itensHoje.filter(i => i.refeicao === r.id), dataInput(agora));
+  let ultima = -1;
+  refeicoes.forEach((r, i) => { if (feita(r)) ultima = i; });
+  const planejadas = new Set(itensHoje.map(i => i.refeicao));
+  if (ultima >= 0) {
+    // refeições vazias entre a feita e uma planejada são puladas (não serão feitas)
+    const depois = refeicoes.slice(ultima + 1).filter(r => !feita(r));
+    return depois.find(r => planejadas.has(r.id)) || depois[0] || null;
+  }
+  const min = minAgora(agora) - 90;
+  return refeicoes.find(r => planejadas.has(r.id) || emMin(r.horario) == null || emMin(r.horario) >= min) || refeicoes[refeicoes.length - 1] || null;
+}
+// Passou mais de 2 h do horário da refeição
+export const refeicaoAtrasada = (r, agora = new Date()) => emMin(r?.horario) != null && minAgora(agora) - emMin(r.horario) > 120;
 
 // Itens da última vez que essa refeição foi registrada (até 14 dias atrás)
 export async function ultimaVezDaRefeicao(refeicaoId, antesDe) {
@@ -116,10 +136,10 @@ export async function itensDoDia(dia) {
 export async function diasComRegistro() {
   return new Set((await DB.todos(T.diario)).map(i => i.dia));
 }
-// Totais (kcal e macros) de cada dia pedido: { 'aaaa-mm-dd': {kcal, p, c, g...} }
+// Totais consumidos (kcal e macros) de cada dia pedido: { 'aaaa-mm-dd': {kcal, p, c, g...} }
 export async function totaisPorDia(dias) {
   const todos = await DB.todos(T.diario);
-  return Object.fromEntries(dias.map(d => [d, somar(todos.filter(i => i.dia === d))]));
+  return Object.fromEntries(dias.map(d => [d, somar(consumidos(todos.filter(i => i.dia === d)))]));
 }
 export const salvarItem = i => DB.salvar(T.diario, i);
 export const excluirItem = id => DB.excluir(T.diario, id);

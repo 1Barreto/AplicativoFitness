@@ -6,7 +6,7 @@ import { esc, fmtNum, clone } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio, folha } from '../../core/ui.js';
 import { pesoAtual } from '../corpo/dados.js';
 import {
-  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, proximaRefeicao, ultimaVezDaRefeicao, salvarItem, excluirItem, novoItem,
+  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, excluirItem, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
   copiaAlimento, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS,
 } from './dados.js';
@@ -25,19 +25,23 @@ function rotuloDia(dia) {
 }
 
 // Anel de calorias (SVG)
-function anel(consumido, meta, { tamanho = 132, espessura = 11 } = {}) {
+// planejado: total com as refeições ainda não feitas (arco mais claro)
+function anel(consumido, meta, { tamanho = 132, espessura = 11, planejado = 0 } = {}) {
   const r = (120 - espessura) / 2, c = 2 * Math.PI * r;
   const frac = meta ? Math.min(consumido / meta, 1) : 0;
+  const fracPlan = meta && planejado > consumido ? Math.min(planejado / meta, 1) : 0;
   const passou = meta && consumido > meta;
   return `
     <svg class="anel ${passou ? 'passou' : ''}" viewBox="0 0 120 120" width="${tamanho}" height="${tamanho}" aria-hidden="true">
       <circle cx="60" cy="60" r="${r}" fill="none" stroke-width="${espessura}" class="anel-trilho"/>
+      ${fracPlan ? `<circle cx="60" cy="60" r="${r}" fill="none" stroke-width="${espessura}" class="anel-plano"
+        stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - fracPlan)}" stroke-linecap="round" transform="rotate(-90 60 60)"/>` : ''}
       <circle cx="60" cy="60" r="${r}" fill="none" stroke-width="${espessura}" class="anel-valor"
         stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - frac)}" stroke-linecap="round" transform="rotate(-90 60 60)"/>
     </svg>`;
 }
 
-function blocoResumo(total, metas) {
+function blocoResumo(total, metas, plano) {
   const meta = metas.kcal;
   const resta = meta ? meta - total.kcal : null;
   const macro = ([k, nome]) => {
@@ -53,7 +57,7 @@ function blocoResumo(total, metas) {
   return `
     <div class="resumo-kcal">
       <div class="anel-area">
-        ${anel(total.kcal, meta)}
+        ${anel(total.kcal, meta, { planejado: plano.kcal })}
         <div class="anel-texto">
           ${meta ? `<strong>${fmtKcal(Math.abs(resta))}</strong><small>${resta >= 0 ? 'restantes' : 'acima'}</small>`
             : `<strong>${fmtKcal(total.kcal)}</strong><small>kcal</small>`}
@@ -61,6 +65,7 @@ function blocoResumo(total, metas) {
       </div>
       <div class="resumo-numeros">
         <div><small>Consumido</small><b>${fmtKcal(total.kcal)}</b></div>
+        ${plano.kcal > total.kcal + 0.5 ? `<div class="linha-plano"><small>Planejado</small><b>${fmtKcal(plano.kcal)}</b></div>` : ''}
         <button class="linha-meta" data-acao="metas"><small>Meta</small><b>${meta ? fmtKcal(meta) : 'Definir'}${Icone.editar}</b></button>
         <div><small>Fibra</small><b>${fmtG(total.fibra)} g</b></div>
         <div><small>Sódio</small><b>${fmtKcal(total.sodio)} mg</b></div>
@@ -95,7 +100,8 @@ async function telaDieta(el, _p, query) {
   definirTitulo('Dieta');
   const dia = /^\d{4}-\d{2}-\d{2}$/.test(query.dia || '') ? query.dia : hojeISO();
   const [config, itens, comRegistro] = await Promise.all([obterConfig(), itensDoDia(dia), diasComRegistro()]);
-  const total = somar(itens);
+  const total = somar(consumidos(itens));
+  const plano = somar(itens);
   const refeicoes = [...config.refeicoes];
   const ids = new Set(refeicoes.map(r => r.id));
   if (itens.some(i => !ids.has(i.refeicao))) refeicoes.push({ id: '__outros', nome: 'Outros' });
@@ -138,7 +144,7 @@ async function telaDieta(el, _p, query) {
             <button class="icon-btn btn-editar-metas" data-acao="metas" aria-label="Editar metas" title="Editar metas">${Icone.editar}</button>
           </div>
           
-          ${blocoResumo(total, metas)}
+          ${blocoResumo(total, metas, plano)}
         </section>
         <nav class="dieta-atalhos">
           <button class="chip" data-acao="metas">${Icone.medidor}<span>Metas</span></button>
@@ -154,10 +160,18 @@ async function telaDieta(el, _p, query) {
         ${refeicoes.map(r => {
           const lista = doGrupo(r);
           const t = somar(lista);
+          const feita = refeicaoFeita(lista);
           return `
-          <article class="cartao refeicao" data-ref="${esc(r.id)}">
+          <article class="cartao refeicao ${lista.length ? (feita ? 'feita' : 'planejada') : ''}" data-ref="${esc(r.id)}">
             <div class="refeicao-topo">
-              <div class="refeicao-titulo"><h3>${esc(r.nome)}</h3>${lista.length ? linhaMacros(t) : ''}</div>
+              <div class="refeicao-titulo">
+                <div class="refeicao-nome">
+                  ${lista.length ? `<button class="check-ref ${feita ? 'ativo' : ''}" data-acao="feita" aria-pressed="${feita}" title="${feita ? 'Feita · toque para desmarcar' : 'Marcar como feita'}">${Icone.check}</button>` : ''}
+                  <h3>${esc(r.nome)}</h3>
+                  ${lista.length ? `<span class="estado-ref">${feita ? 'Feita' : 'Planejada'}</span>` : ''}
+                </div>
+                ${lista.length ? linhaMacros(t) : ''}
+              </div>
               ${lista.length ? `<span class="col col-qtd">${lista.length} ${lista.length === 1 ? 'item' : 'itens'}</span><span class="col m-p">${fmtG(t.p)} g</span><span class="col m-c">${fmtG(t.c)} g</span><span class="col m-g">${fmtG(t.g)} g</span>` : '<span class="col col-vazia">Nada registrado</span>'}
               <span class="refeicao-kcal">${lista.length ? `${fmtKcal(t.kcal)}<small>kcal</small>` : ''}</span>
               <button class="icon-btn" data-acao="menu-ref" aria-label="Opções da refeição">${Icone.pontos}</button>
@@ -190,14 +204,21 @@ async function telaDieta(el, _p, query) {
   el.querySelector('[data-acao=copiar-dia]')?.addEventListener('click', async () => {
     const ontem = await itensDoDia(somarDias(dia, -1));
     if (!ontem.length) { toast('O dia anterior não tem registros'); return; }
-    for (const i of ontem) { const { id, created_at, updated_at, ...resto } = i; await salvarItem({ ...resto, dia }); }
+    for (const i of ontem) { const { id, created_at, updated_at, feito, ...resto } = i; await salvarItem({ ...resto, dia }); }
     toast(`${ontem.length} ${ontem.length === 1 ? 'item copiado' : 'itens copiados'}`, 'sucesso'); recarregar();
   });
 
   el.querySelectorAll('.refeicao').forEach(card => {
     const ref = refeicoes.find(r => r.id === card.dataset.ref);
+    card.querySelector('[data-acao=feita]')?.addEventListener('click', async () => {
+      const lista = doGrupo(ref);
+      const feita = !refeicaoFeita(lista);
+      await marcarRefeicaoFeita(lista, feita);
+      if (feita) toast(`${esc(ref.nome)} feita`, 'sucesso', 1400);
+      recarregar();
+    });
     card.querySelector('[data-acao=add]')?.addEventListener('click', async () => {
-      const n = await adicionarAlimentos({ dia, refeicao: ref });
+      const n = await adicionarAlimentos({ dia, refeicao: ref, feito: refeicaoFeita(doGrupo(ref)) });
       if (n) recarregar();
     });
     card.querySelectorAll('[data-item]').forEach(b => b.onclick = async () => {
@@ -227,7 +248,7 @@ async function telaDieta(el, _p, query) {
       } else if (op === 'copiar') {
         const ant = (await itensDoDia(somarDias(dia, -1))).filter(i => i.refeicao === ref.id);
         if (!ant.length) { toast(`Nada em ${ref.nome} no dia anterior`); return; }
-        for (const i of ant) { const { id, created_at, updated_at, ...resto } = i; await salvarItem({ ...resto, dia }); }
+        for (const i of ant) { const { id, created_at, updated_at, feito, ...resto } = i; await salvarItem({ ...resto, dia }); }
         toast(`${ant.length} ${ant.length === 1 ? 'item copiado' : 'itens copiados'}`, 'sucesso'); recarregar();
       } else if (op === 'renomear') {
         const nome = await pedirTexto('Renomear refeição', ref.nome);
@@ -243,7 +264,8 @@ async function telaDieta(el, _p, query) {
 }
 
 // Busca + quantidade para uma refeição do dia. Retorna quantos itens entraram.
-async function adicionarAlimentos({ dia, refeicao }) {
+// feito: a refeição já está marcada como feita, então o que entrar também está.
+async function adicionarAlimentos({ dia, refeicao, feito = false }) {
   let ordem = Date.now();
   return escolherAlimentos({
     titulo: `Adicionar em ${refeicao.nome}`,
@@ -251,12 +273,12 @@ async function adicionarAlimentos({ dia, refeicao }) {
     aoEscolher: async (alimento) => {
       const r = await escolherQuantidade(alimento, alimento.ultimaQtd ? { gramas: alimento.ultimaQtd, porcao: alimento.ultimaPorcao } : {});
       if (!r) return false;
-      await salvarItem({ ...novoItem(r.alimento, r.gramas, { dia, refeicao: refeicao.id, porcao: r.porcao }), ordem: ordem++ });
+      await salvarItem({ ...novoItem(r.alimento, r.gramas, { dia, refeicao: refeicao.id, porcao: r.porcao }), feito, ordem: ordem++ });
       toast(`${esc(r.alimento.nome.split(',')[0])} adicionado`, 'sucesso', 1400);
       return true;
     },
     aoEscolherRefeicao: async (salva) => {
-      for (const i of salva.itens) await salvarItem({ ...novoItem(i.alimento, i.gramas, { dia, refeicao: refeicao.id, porcao: i.porcao }), ordem: ordem++ });
+      for (const i of salva.itens) await salvarItem({ ...novoItem(i.alimento, i.gramas, { dia, refeicao: refeicao.id, porcao: i.porcao }), feito, ordem: ordem++ });
       toast(`${esc(salva.nome)} adicionada`, 'sucesso', 1400);
       return true;
     },
@@ -417,12 +439,14 @@ async function telaRefeicaoSalva(el, { id }) {
 }
 
 // ---------- Cartão "Próxima refeição" (primeiro da tela Hoje) ----------
+// Mostra a primeira refeição ainda não feita. Já planejada: um toque marca como
+// feita. Vazia: repetir a última vez ou adicionar.
 async function cartaoProximaRefeicao(el) {
   const hoje = hojeISO();
   const [config, itens, tipos] = await Promise.all([obterConfig(), itensDoDia(hoje), tiposDosDias([hoje])]);
   const prox = proximaRefeicao(config.refeicoes, itens);
   const metas = metasDe(config)[tipos[hoje].tipo] || {};
-  const t = somar(itens);
+  const t = somar(consumidos(itens));
   const resta = metas.kcal ? metas.kcal - t.kcal : null;
   const redesenhar = () => cartaoProximaRefeicao(el);
 
@@ -430,36 +454,47 @@ async function cartaoProximaRefeicao(el) {
     el.innerHTML = `
       <a class="cartao cartao-proxima" href="#/dieta">
         <div class="cartao-cab">${Icone.dieta}<h3>Próxima refeição</h3></div>
-        <p class="proxima-nome">Tudo registrado hoje ${Icone.check}</p>
+        <p class="proxima-nome">Todas as refeições feitas ${Icone.check}</p>
         <p class="sutil">${fmtKcal(t.kcal)} kcal${metas.kcal ? ` de ${fmtKcal(metas.kcal)}` : ''} · P ${fmtG(t.p)} · C ${fmtG(t.c)} · G ${fmtG(t.g)}</p>
       </a>`;
     return;
   }
-  const ultima = await ultimaVezDaRefeicao(prox.id, hoje);
-  const tu = ultima ? somar(ultima.itens) : null;
+  const planejados = itens.filter(i => i.refeicao === prox.id);
+  const ultima = planejados.length ? null : await ultimaVezDaRefeicao(prox.id, hoje);
+  const mostrar = planejados.length ? planejados : ultima?.itens;
+  const tm = mostrar ? somar(mostrar) : null;
+  const atrasada = refeicaoAtrasada(prox);
+  const lista = mostrar ? `
+    <div class="proxima-ultima">
+      <small>${planejados.length ? 'Planejado' : `Última vez · ${rotuloDia(ultima.dia).toLowerCase()}`} · ${fmtKcal(tm.kcal)} kcal · P ${fmtG(tm.p)} · C ${fmtG(tm.c)} · G ${fmtG(tm.g)}</small>
+      <ul>${mostrar.slice(0, 5).map(i => `<li><span>${esc(i.alimento.nome.split(',').slice(0, 2).join(','))}</span><b>${fmtQtd(i)}</b></li>`).join('')}${mostrar.length > 5 ? `<li class="sutil">+ ${mostrar.length - 5} itens</li>` : ''}</ul>
+    </div>` : '';
+  const acoes = planejados.length
+    ? `<button class="btn btn-primario" data-acao="feita">${Icone.check}<span>Marcar como feita</span></button>
+       <a class="btn btn-secundario" href="#/dieta">${Icone.editar}<span>Editar</span></a>`
+    : `${ultima ? `<button class="btn btn-primario" data-acao="repetir">${Icone.copiar}<span>Repetir</span></button>` : ''}
+       <button class="btn ${ultima ? 'btn-secundario' : 'btn-primario'}" data-acao="add">${Icone.mais}<span>${ultima ? 'Adicionar' : 'Adicionar alimento'}</span></button>`;
   el.innerHTML = `
     <section class="cartao cartao-proxima">
-      <div class="cartao-cab">${Icone.dieta}<h3>Próxima refeição</h3>${prox.horario ? `<span class="link-cab hora-pill">${Icone.timer}${esc(prox.horario)}</span>` : ''}</div>
+      <div class="cartao-cab">${Icone.dieta}<h3>Próxima refeição</h3>${prox.horario ? `<span class="link-cab hora-pill ${atrasada ? 'atrasada' : ''}">${Icone.timer}${atrasada ? 'Atrasada · ' : ''}${esc(prox.horario)}</span>` : ''}</div>
       <div class="proxima-corpo">
         <div class="proxima-info">
           <p class="proxima-nome">${esc(prox.nome)}</p>
-          <p class="sutil pequeno">${resta == null ? `${fmtKcal(t.kcal)} kcal registradas hoje` : resta >= 0 ? `Faltam <b>${fmtKcal(resta)} kcal</b> para a meta de hoje` : `${fmtKcal(-resta)} kcal acima da meta de hoje`}</p>
-          ${ultima ? `
-            <div class="proxima-ultima">
-              <small>Última vez · ${rotuloDia(ultima.dia).toLowerCase()} · ${fmtKcal(tu.kcal)} kcal · P ${fmtG(tu.p)} · C ${fmtG(tu.c)} · G ${fmtG(tu.g)}</small>
-              <ul>${ultima.itens.slice(0, 5).map(i => `<li><span>${esc(i.alimento.nome.split(',').slice(0, 2).join(','))}</span><b>${fmtQtd(i)}</b></li>`).join('')}${ultima.itens.length > 5 ? `<li class="sutil">+ ${ultima.itens.length - 5} itens</li>` : ''}</ul>
-            </div>` : ''}
+          <p class="sutil pequeno">${atrasada && planejados.length ? 'Ainda não marcada como feita. ' : ''}${resta == null ? `${fmtKcal(t.kcal)} kcal consumidas hoje` : resta >= 0 ? `Faltam <b>${fmtKcal(resta)} kcal</b> para a meta de hoje` : `${fmtKcal(-resta)} kcal acima da meta de hoje`}</p>
+          ${lista}
         </div>
-        <div class="proxima-acoes">
-          ${ultima ? `<button class="btn btn-primario" data-acao="repetir">${Icone.copiar}<span>Repetir</span></button>` : ''}
-          <button class="btn ${ultima ? 'btn-secundario' : 'btn-primario'}" data-acao="add">${Icone.mais}<span>${ultima ? 'Adicionar' : 'Adicionar alimento'}</span></button>
-        </div>
+        <div class="proxima-acoes">${acoes}</div>
       </div>
     </section>`;
-  el.querySelector('[data-acao=add]').onclick = async () => { if (await adicionarAlimentos({ dia: hoje, refeicao: prox })) redesenhar(); };
+  el.querySelector('[data-acao=feita]')?.addEventListener('click', async () => {
+    await marcarRefeicaoFeita(planejados, true);
+    toast(`${esc(prox.nome)} feita`, 'sucesso');
+    redesenhar();
+  });
+  el.querySelector('[data-acao=add]')?.addEventListener('click', async () => { if (await adicionarAlimentos({ dia: hoje, refeicao: prox })) redesenhar(); });
   el.querySelector('[data-acao=repetir]')?.addEventListener('click', async () => {
     let ordem = Date.now();
-    for (const i of ultima.itens) { const { id, created_at, updated_at, ...resto } = i; await salvarItem({ ...resto, dia: hoje, ordem: ordem++ }); }
+    for (const i of ultima.itens) { const { id, created_at, updated_at, feito, ...resto } = i; await salvarItem({ ...resto, dia: hoje, feito: true, ordem: ordem++ }); }
     toast(`Refeição registrada: ${esc(prox.nome)}`, 'sucesso');
     redesenhar();
   });
@@ -470,19 +505,20 @@ async function cartaoDieta(el) {
   const [config, itens, tipos] = await Promise.all([obterConfig(), itensDoDia(hojeISO()), tiposDosDias([hojeISO()])]);
   const tipo = tipos[hojeISO()].tipo;
   const metas = metasDe(config)[tipo] || {};
-  const t = somar(itens);
+  const t = somar(consumidos(itens));
+  const plano = somar(itens);
   const resta = metas.kcal ? metas.kcal - t.kcal : null;
   el.innerHTML = `
     <a class="cartao cartao-dieta" href="#/dieta">
       <div class="cartao-cab">${Icone.dieta}<h3>Dieta de hoje</h3><span class="link-cab tipo-mini ${tipo}">${TIPOS_DIA[tipo]}</span></div>
       <div class="dieta-mini">
-        <div class="anel-area mini">${anel(t.kcal, metas.kcal, { tamanho: 84, espessura: 12 })}
+        <div class="anel-area mini">${anel(t.kcal, metas.kcal, { tamanho: 84, espessura: 12, planejado: plano.kcal })}
           <div class="anel-texto"><strong>${fmtKcal(t.kcal)}</strong><small>kcal</small></div></div>
         <div class="dieta-mini-macros">
           ${MACROS.map(([k, nome]) => `<div class="m-${k}"><small>${nome}</small><b>${fmtG(t[k])}${metas[k] ? `<small> / ${fmtNum(metas[k])} g</small>` : ' g'}</b><div class="macro-barra"><i style="width:${metas[k] ? Math.min(t[k] / metas[k] * 100, 100) : 0}%"></i></div></div>`).join('')}
         </div>
       </div>
-      <p class="sutil pequeno">${!itens.length ? 'Nada registrado ainda. Toque para adicionar.' : resta == null ? `${itens.length} ${itens.length === 1 ? 'item' : 'itens'} registrados` : resta >= 0 ? `Faltam ${fmtKcal(resta)} kcal para a meta` : `${fmtKcal(-resta)} kcal acima da meta`}</p>
+      <p class="sutil pequeno">${!itens.length ? 'Nada registrado ainda. Toque para adicionar.' : plano.kcal > t.kcal + 0.5 ? `${fmtKcal(plano.kcal)} kcal planejadas · ${fmtKcal(t.kcal)} consumidas` : resta == null ? `${itens.length} ${itens.length === 1 ? 'item' : 'itens'} registrados` : resta >= 0 ? `Faltam ${fmtKcal(resta)} kcal para a meta` : `${fmtKcal(-resta)} kcal acima da meta`}</p>
     </a>`;
 }
 

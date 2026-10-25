@@ -1174,3 +1174,22 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 .link-btn.centro-bloco { display: flex; margin: 14px auto; font-size: 14px; }
 .busca-barra .abas-mini { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
 .busca-barra .abas-mini .chip { flex: none; }
+
+/* Refeição feita x planejada */
+.anel-plano { stroke: rgba(var(--p-rgb), .28); }
+.anel.passou .anel-plano { stroke: rgba(var(--s-rgb), .28); }
+.resumo-numeros .linha-plano b { color: var(--texto-2); font-size: 14px; }
+.refeicao-nome { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.refeicao-nome h3 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.check-ref { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .25); background: none; color: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; transition: background .15s, border-color .15s; }
+.check-ref svg { width: 15px; height: 15px; stroke-width: 3; }
+.check-ref:hover { border-color: var(--p); color: rgba(var(--p-rgb), .6); }
+.check-ref.ativo { background: var(--p); border-color: var(--p); color: var(--sobre-p); }
+.estado-ref { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .03em; padding: 2px 8px; border-radius: 999px; background: #1c1c1f; color: var(--texto-2); }
+.refeicao.feita .estado-ref { background: rgba(var(--p-rgb), .14); color: var(--p); }
+.refeicao.feita { border-color: rgba(var(--p-rgb), .35); }
+.refeicao.planejada .refeicao-itens strong, .refeicao.planejada .refeicao-itens b { color: var(--texto-2); }
+.hora-pill.atrasada { background: rgba(var(--s-rgb), .16); color: var(--s); }
+@media (max-width: 899px) { .estado-ref { display: none; } }
+.proxima-acoes:has([data-acao=feita]) { grid-template-columns: 1fr auto; }
+.proxima-acoes [data-acao=feita] { white-space: nowrap; }
