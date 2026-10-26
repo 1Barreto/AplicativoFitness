@@ -489,8 +489,8 @@ async function cartaoProximaRefeicao(el) {
       <div class="proxima-corpo">
         <div class="proxima-info">
           <div class="proxima-titulo">
-            <p class="proxima-nome">${esc(prox.nome)}</p>
             ${planejados.length ? `<button class="check-ref check-prox" data-acao="feita" aria-pressed="false" title="Marcar como feita" aria-label="Marcar ${esc(prox.nome)} como feita">${Icone.check}</button>` : ''}
+            <p class="proxima-nome">${esc(prox.nome)}</p>
           </div>
           ${lista}
         </div>
