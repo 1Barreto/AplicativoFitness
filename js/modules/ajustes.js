@@ -43,7 +43,7 @@ async function telaAjustes(el) {
         <span class="sutil" data-valor>${descanso ? `${Math.floor(descanso / 60)}:${String(descanso % 60).padStart(2, '0')}` : 'Desligado'}</span>
       </button>
       <label class="linha-lista">
-        <span class="item-texto"><strong>Aviso sonoro</strong><small>Toca ao terminar o descanso e ao bater recorde</small></span>
+        <span class="item-texto"><strong>Aviso sonoro</strong><small>Toca ao terminar o descanso</small></span>
         <input type="checkbox" class="interruptor" data-pref="som" ${som.ativo() ? 'checked' : ''}>
       </label>
       <button class="linha-lista" data-acao="testar-som"><span class="item-texto"><strong>Testar som</strong><small>Se não ouvir, aumente o volume do aparelho</small></span>${Icone.play}</button>

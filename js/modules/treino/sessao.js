@@ -282,7 +282,6 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
         s.feita = true;
         s.recordes = calcularRecordes(e, s);
         if (s.recordes.length) {
-          som.recorde();
           toast(`${Icone.trofeu} Novo recorde: ${s.recordes.map(r => NOMES_RECORDE[r]).join(', ')}!`, 'recorde', 3500);
         }
         if (modo === 'ativo' && e.descanso > 0) iniciarDescanso(e.descanso, mapa.get(e.exercicio_id)?.nome);
