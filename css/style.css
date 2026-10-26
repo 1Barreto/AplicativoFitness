@@ -1233,3 +1233,21 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
   body.em-treino .content { padding-bottom: calc(var(--seg-baixo) + 110px); }
   body.em-treino .painel-descanso { bottom: calc(var(--seg-baixo) + 12px); }
 }
+
+/* Barra do treino minimizado (estilo Hevy) */
+.barra-treino-card { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 999px;
+  background: rgba(18, 18, 20, .94); border: 1px solid rgba(255, 255, 255, .08);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 16px 40px rgba(0, 0, 0, .6); }
+.barra-treino-card .barra-treino-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; border-radius: 999px; color: var(--texto); text-decoration: none; }
+.bt-abrir, .bt-lixo { flex: none; width: 46px; height: 46px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, .07); color: var(--texto); border: 0; cursor: pointer; }
+.bt-abrir svg { width: 22px; height: 22px; }
+.bt-lixo { color: var(--perigo, #ff5c7a); }
+.bt-lixo svg { width: 21px; height: 21px; }
+.bt-lixo:hover { background: rgba(255, 92, 122, .15); }
+.bt-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.bt-info strong { display: flex; align-items: center; gap: 8px; font-size: 16px; min-width: 0; }
+.bt-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bt-tempo { font-weight: 500; color: var(--texto-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bt-info small { color: var(--texto-2); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bt-info small.descansando { color: var(--destaque); font-weight: 600; }
+.bt-info .pulso { flex: none; background: #4cd964; }

@@ -76,6 +76,7 @@ function nomePadrao() {
 }
 
 // ---------- Barra "treino em andamento" (aparece nas outras telas) ----------
+// Como no Hevy: tocar no cartão volta ao treino; a lixeira descarta (com confirmação).
 let intervaloBarra = null;
 function atualizarBarra() {
   const barra = document.getElementById('barra-treino');
@@ -86,15 +87,35 @@ function atualizarBarra() {
   if (!ativo || naTela) { barra.hidden = true; document.body.classList.remove('com-barra-treino'); return; }
   barra.hidden = false;
   document.body.classList.add('com-barra-treino');
+  barra.innerHTML = `
+    <div class="barra-treino-card">
+      <a href="#/treino/ativo" class="barra-treino-link" aria-label="Voltar ao treino">
+        <span class="bt-abrir">${Icone.cima}</span>
+        <span class="bt-info">
+          <strong><span class="pulso"></span><span class="bt-nome">${esc(ativo.nome)}</span><span class="bt-tempo" data-tempo></span></strong>
+          <small data-detalhe></small>
+        </span>
+      </a>
+      <button class="bt-lixo" data-descartar aria-label="Descartar treino">${Icone.lixo}</button>
+    </div>`;
+  barra.querySelector('[data-descartar]').onclick = async () => {
+    if (!(await confirmar('Descartar este treino? Os dados registrados serão perdidos.', { ok: 'Descartar', perigo: true }))) return;
+    gravarDescanso(null);
+    gravarAtivo(null);
+    toast('Treino descartado');
+    dispatchEvent(new HashChangeEvent('hashchange')); // redesenha a tela atual (some o "Continuar treino")
+  };
+  // Exercício atual: o primeiro com série não concluída
+  const atual = (ativo.exercicios || []).find(e => e.series.some(x => !x.feita)) || ativo.exercicios?.[ativo.exercicios.length - 1];
+  let nomeEx = '';
+  if (atual) mapaDeExercicios().then(m => { nomeEx = m.get(atual.exercicio_id)?.nome || ''; desenhar(); });
+  const tempo = barra.querySelector('[data-tempo]'), detalhe = barra.querySelector('[data-detalhe]');
   const desenhar = () => {
     const d = obterDescanso();
     const resta = d ? Math.ceil((d.fim - Date.now()) / 1000) : 0;
-    barra.innerHTML = `
-      <a href="#/treino/ativo" class="barra-treino-link">
-        <span class="pulso"></span>
-        <span><strong>${esc(ativo.nome)}</strong><small>${resta > 0 ? `Descanso ${fmtSeg(resta)}` : `Em andamento · ${fmtDuracao(Date.now() - new Date(ativo.inicio), true)}`}</small></span>
-        <span class="btn btn-primario btn-pequeno">Retomar</span>
-      </a>`;
+    tempo.textContent = fmtDuracao(Date.now() - new Date(ativo.inicio), true);
+    detalhe.textContent = resta > 0 ? `Descanso ${fmtSeg(resta)}` : nomeEx || 'Em andamento';
+    detalhe.classList.toggle('descansando', resta > 0);
   };
   desenhar();
   intervaloBarra = setInterval(desenhar, 1000);
