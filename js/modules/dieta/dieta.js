@@ -440,7 +440,14 @@ async function telaRefeicaoSalva(el, { id }) {
 
 // Nome resumido: sem parênteses e só as duas primeiras palavras
 // ("Queijo, muçarela (média de...)" -> "Queijo, muçarela")
-const nomeCurto = n => n.replace(/\s*\(.*?\)/g, '').trim().split(/\s+/).slice(0, 2).join(' ').replace(/[,;.]$/, '') || n;
+const CONECTIVOS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'com', 'em', 'a', 'o', 'ao', 'na', 'no', 'para', 'sem']);
+const nomeCurto = n => {
+  const palavras = n.replace(/\s*\(.*?\)/g, '').trim().split(/\s+/), out = [];
+  let fortes = 0;
+  for (const w of palavras) { out.push(w); if (!CONECTIVOS.has(w.toLowerCase().replace(/[,;.]$/, '')) && ++fortes === 2) break; }
+  while (out.length > 1 && CONECTIVOS.has(out[out.length - 1].toLowerCase())) out.pop();
+  return out.join(' ').replace(/[,;.]$/, '') || n;
+};
 
 // ---------- Cartão "Próxima refeição" (primeiro da tela Hoje) ----------
 // Mostra a primeira refeição ainda não feita. Já planejada: um toque marca como
@@ -481,12 +488,22 @@ async function cartaoProximaRefeicao(el) {
       <div class="cartao-cab">${Icone.dieta}<h3>Próxima refeição</h3>${prox.horario ? `<span class="link-cab hora-pill ${atrasada ? 'atrasada' : ''}">${Icone.timer}${atrasada ? 'Atrasada · ' : ''}${esc(prox.horario)}</span>` : ''}</div>
       <div class="proxima-corpo">
         <div class="proxima-info">
-          <p class="proxima-nome">${esc(prox.nome)}</p>
+          <div class="proxima-titulo">
+            <p class="proxima-nome">${esc(prox.nome)}</p>
+            ${planejados.length ? `<button class="check-ref check-prox" data-acao="feita" aria-pressed="false" title="Marcar como feita" aria-label="Marcar ${esc(prox.nome)} como feita">${Icone.check}</button>` : ''}
+          </div>
           ${lista}
         </div>
         ${acoes ? `<div class="proxima-acoes">${acoes}</div>` : ''}
       </div>
     </${tag}>`;
+  el.querySelector('[data-acao=feita]')?.addEventListener('click', async ev => {
+    ev.preventDefault(); ev.stopPropagation();
+    ev.currentTarget.classList.add('ativo');
+    await marcarRefeicaoFeita(planejados, true);
+    toast(`${esc(prox.nome)} feita`, 'sucesso', 1400);
+    redesenhar();
+  });
   el.querySelector('[data-acao=add]')?.addEventListener('click', async () => { if (await adicionarAlimentos({ dia: hoje, refeicao: prox })) redesenhar(); });
   el.querySelector('[data-acao=repetir]')?.addEventListener('click', async () => {
     let ordem = Date.now();

@@ -1313,3 +1313,9 @@ body.com-tela-salvar .tabbar, body.com-tela-salvar .barra-treino, body.com-tela-
 /* Toque imediato no menu (sem atraso de toque duplo no iPhone) */
 .tabbar, .tabbar a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 @media (max-width: 899px) { .tabbar { will-change: transform; } .tabbar a:active { transform: scale(.94); } }
+
+/* Bolinha "feita" no cartão Próxima refeição (tela Hoje) */
+.proxima-titulo { display: flex; align-items: center; gap: 12px; }
+.proxima-titulo .proxima-nome { flex: 1; min-width: 0; }
+.check-prox { width: 34px; height: 34px; margin-left: auto; }
+.check-prox svg { width: 18px; height: 18px; }
