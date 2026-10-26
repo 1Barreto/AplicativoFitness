@@ -17,6 +17,7 @@ import { avatarExercicio } from './fotos.js';
 import { escolherExercicios, escolherTipoSerie, rotulosSeries, escolherDescanso, escolherRir, fmtRir } from './componentes.js';
 
 const CHAVE = 'treinoAtivo';
+const RECORDE_CURTO = { carga: 'Carga', e1rm: '1RM est.', volume: 'Volume' };
 const CHAVE_DESCANSO = 'descansoAtivo';
 
 // ---------- Estado persistente ----------
@@ -151,14 +152,14 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
             const a = ant[j];
             const tipo = TIPOS_SERIE[s.tipo] || TIPOS_SERIE.N;
             return `
-            <div class="serie-linha ${s.feita ? 'feita' : ''}" data-s="${j}">
+            <div class="serie-linha ${s.feita ? 'feita' : ''} ${s.recordes?.length ? 'com-recorde' : ''}" data-s="${j}">
               <button class="tipo-serie ${tipo.classe}" data-acao="tipo">${rotulos[j]}</button>
               <button class="anterior" data-acao="copiar-ant" ${a ? '' : 'disabled'}>${a ? `${fmtNum(a.peso) || 0} × ${fmtNum(a.reps) || 0}` : '–'}</button>
               <input class="campo campo-serie" data-campo="peso" inputmode="decimal" enterkeyhint="next" placeholder="${a ? fmtNum(a.peso) : c1}" value="${fmtNum(s.peso)}">
               <input class="campo campo-serie" data-campo="reps" inputmode="decimal" enterkeyhint="done" placeholder="${a ? fmtNum(a.reps) : c2}" value="${fmtNum(s.reps)}">
               <button class="btn-rir ${s.rir !== null && s.rir !== undefined ? 'com-valor' : ''}" data-acao="rir" aria-label="RIR">${fmtRir(s.rir) || Icone.medidor}</button>
               <button class="btn-check" data-acao="feita" aria-label="Concluir série">${Icone.check}</button>
-              ${s.recordes?.length ? `<span class="selo-recorde" title="${s.recordes.map(r => NOMES_RECORDE[r]).join(', ')}">${Icone.trofeu}</span>` : ''}
+              ${s.recordes?.length ? `<div class="recorde-faixa" title="${s.recordes.map(r => NOMES_RECORDE[r]).join(', ')}"><span class="recorde-icone">${Icone.trofeu}</span><b>Novo recorde</b><span>${s.recordes.map(r => RECORDE_CURTO[r]).join(' · ')}</span></div>` : ''}
             </div>`;
           }).join('')}
         </div>
