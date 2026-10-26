@@ -406,7 +406,14 @@ async function pedirTelaLigada() {
 function liberarTela() { try { wakeLock?.release(); } catch { /* ignora */ } wakeLock = null; }
 
 // ---------- Finalizar ----------
+let finalizando = false;   // evita abrir duas telas de salvar com toque duplo
 async function finalizar(estado) {
+  if (finalizando) return;
+  finalizando = true;
+  try { await finalizarTreino(estado); } finally { finalizando = false; }
+}
+async function finalizarTreino(estado) {
+  let marcouAgora = false;
   const feitas = estado.exercicios.flatMap(e => e.series.filter(s => s.feita));
   if (!feitas.length) {
     if (await confirmar('Nenhuma série foi concluída. Deseja descartar o treino?', { ok: 'Descartar', perigo: true })) descartar();
@@ -421,7 +428,7 @@ async function finalizar(estado) {
       { texto: 'Voltar ao treino', valor: null, icone: Icone.voltar },
     ]);
     if (!r) return;
-    if (r === 'marcar') comValor.forEach(s => { s.feita = true; });
+    if (r === 'marcar') { comValor.forEach(s => { s.feita = true; }); gravarAtivo(estado); marcouAgora = true; }
   }
 
   const final = clone(estado);
@@ -431,7 +438,8 @@ async function finalizar(estado) {
     .filter(e => e.series.length);
   const rotina = estado.rotina_id ? await obterRotina(estado.rotina_id) : null;
   const opcoes = await telaSalvar(estado, final, rotina);
-  if (!opcoes) return;                       // voltou para o treino
+  // Voltou para o treino: se marcou séries como concluídas no menu, redesenha para mostrar
+  if (!opcoes) { gravarAtivo(estado); if (marcouAgora) dispatchEvent(new HashChangeEvent('hashchange')); return; }
   if (opcoes === 'descartar') { descartar(); return; }
   const salvo = await salvarTreino(final);
 
