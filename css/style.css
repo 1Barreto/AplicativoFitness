@@ -1285,3 +1285,14 @@ body.com-tela-salvar .tabbar, body.com-tela-salvar .barra-treino, body.com-tela-
 .salvar-exercicios span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .salvar-descartar { margin: 24px auto 0; border: 0; background: none; color: var(--perigo, #ff5c7a); font: inherit; font-size: 17px; font-weight: 600; cursor: pointer; padding: 10px 20px; }
 .salvar-topo { max-width: 640px; margin: 0 auto; }
+/* Treino no celular: cartões mais largos (menos margem nas laterais), como no Hevy */
+@media (max-width: 899px) {
+  body.em-treino .content { padding-left: calc(6px + var(--seg-esq)); padding-right: calc(6px + var(--seg-dir)); }
+  body.em-treino .sessao-topo { margin-left: -6px; margin-right: -6px; padding-left: 16px; padding-right: 16px; }
+  body.em-treino .sessao-resumo { padding-left: 10px; padding-right: 10px; }
+  body.em-treino .exercicio-sessao { padding: 14px 10px 12px; border-radius: 20px; }
+  body.em-treino .exercicio-sessao .tabela-series { margin-left: -4px; margin-right: -4px; }
+  body.em-treino .tabela-series:not(.tabela-rotina) .serie-cab, body.em-treino .tabela-series:not(.tabela-rotina) .serie-linha {
+    grid-template-columns: 30px minmax(44px, 1fr) minmax(58px, 80px) minmax(58px, 80px) 42px 44px; gap: 6px;
+  }
+}
