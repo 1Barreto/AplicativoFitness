@@ -107,6 +107,18 @@ async function iniciar() {
     if (rotaAtual && rotaAtual.recarregar !== false) renderizar({ preservarRolagem: true });
   });
 
+  // Menu de baixo dinâmico (celular): some ao rolar para baixo, volta ao rolar para cima
+  let ultimoY = window.scrollY, acumulado = 0;
+  addEventListener('scroll', () => {
+    const y = window.scrollY, d = y - ultimoY;
+    ultimoY = y;
+    acumulado = Math.sign(d) === Math.sign(acumulado) ? acumulado + d : d;
+    const noFim = innerHeight + y >= document.documentElement.scrollHeight - 4;
+    if (y < 40 || noFim || acumulado < -12) document.body.classList.remove('menu-oculto');
+    else if (acumulado > 16) document.body.classList.add('menu-oculto');
+  }, { passive: true });
+  Bus.on('rota:mudou', () => { document.body.classList.remove('menu-oculto'); acumulado = 0; });
+
   // O áudio no iPhone só pode tocar depois de um toque do usuário.
   addEventListener('pointerdown', () => som.desbloquear(), { once: true, capture: true });
 

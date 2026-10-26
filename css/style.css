@@ -1303,3 +1303,9 @@ body.com-tela-salvar .tabbar, body.com-tela-salvar .barra-treino, body.com-tela-
   .tabbar a { border-radius: 14px; font-size: 11px; gap: 2px; }
   .tabbar a svg { width: 20px; height: 20px; }
 }
+/* Menu some ao rolar para baixo (celular) */
+@media (max-width: 899px) {
+  .tabbar, .barra-treino { transition: transform .28s cubic-bezier(.2, .8, .2, 1), opacity .28s; }
+  body.menu-oculto .tabbar { transform: translateY(calc(100% + var(--abas-fundo) + 12px)); opacity: 0; pointer-events: none; }
+  body.menu-oculto .barra-treino { transform: translateY(calc(var(--abas) + 2px)); }
+}
