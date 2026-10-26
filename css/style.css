@@ -1296,3 +1296,10 @@ body.com-tela-salvar .tabbar, body.com-tela-salvar .barra-treino, body.com-tela-
     grid-template-columns: 30px minmax(44px, 1fr) minmax(58px, 80px) minmax(58px, 80px) 42px 44px; gap: 6px;
   }
 }
+/* Menu de baixo um pouco menor */
+@media (max-width: 899px) {
+  :root { --abas: 56px; }
+  .tabbar { padding: 5px; border-radius: 20px; left: calc(16px + var(--seg-esq)); right: calc(16px + var(--seg-dir)); }
+  .tabbar a { border-radius: 14px; font-size: 11px; gap: 2px; }
+  .tabbar a svg { width: 20px; height: 20px; }
+}
