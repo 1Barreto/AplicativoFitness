@@ -121,6 +121,11 @@ async function iniciar() {
   }, { passive: true });
   Bus.on('rota:mudou', () => { document.body.classList.remove('menu-oculto'); acumulado = 0; });
 
+  // Sem zoom de pinça: o Safari do iPhone ignora "user-scalable=no", então
+  // bloqueia o gesto de dois dedos aqui.
+  for (const g of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(g, ev => ev.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', ev => { if (ev.touches.length > 1 || (ev.scale && ev.scale !== 1)) ev.preventDefault(); }, { passive: false });
+
   // O áudio no iPhone só pode tocar depois de um toque do usuário.
   addEventListener('pointerdown', () => som.desbloquear(), { once: true, capture: true });
 
