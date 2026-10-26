@@ -1227,3 +1227,9 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 .recorde-faixa span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recorde-icone { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f5c451, #f2994a); color: #261800; box-shadow: 0 0 10px rgba(var(--trofeu-rgb), .5); }
 .recorde-icone svg { width: 13px; height: 13px; stroke-width: 2.4; }
+/* Treino em andamento (celular): sem menu de baixo; sai pela seta do topo */
+@media (max-width: 899px) {
+  body.em-treino .tabbar { display: none; }
+  body.em-treino .content { padding-bottom: calc(var(--seg-baixo) + 110px); }
+  body.em-treino .painel-descanso { bottom: calc(var(--seg-baixo) + 12px); }
+}

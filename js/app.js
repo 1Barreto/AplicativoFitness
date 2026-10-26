@@ -37,6 +37,7 @@ async function renderizar({ preservarRolagem = false } = {}) {
   });
   document.getElementById('btn-ajustes').classList.toggle('ativa', caminho.startsWith('/ajustes'));
   document.body.dataset.rota = caminho.split('/')[1] || '';
+  document.body.classList.toggle('em-treino', caminho === '/treino/ativo');
 
   definirTitulo('');
   const el = document.createElement('div');
