@@ -1309,3 +1309,6 @@ body.com-tela-salvar .tabbar, body.com-tela-salvar .barra-treino, body.com-tela-
   body.menu-oculto .tabbar { transform: translateY(calc(100% + var(--abas-fundo) + 12px)); opacity: 0; pointer-events: none; }
   body.menu-oculto .barra-treino { transform: translateY(calc(var(--abas) + 2px)); }
 }
+/* Toque imediato no menu (sem atraso de toque duplo no iPhone) */
+.tabbar, .tabbar a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+@media (max-width: 899px) { .tabbar { will-change: transform; } .tabbar a:active { transform: scale(.94); } }

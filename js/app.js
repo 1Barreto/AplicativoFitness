@@ -114,8 +114,10 @@ async function iniciar() {
     ultimoY = y;
     acumulado = Math.sign(d) === Math.sign(acumulado) ? acumulado + d : d;
     const noFim = innerHeight + y >= document.documentElement.scrollHeight - 4;
-    if (y < 40 || noFim || acumulado < -12) document.body.classList.remove('menu-oculto');
-    else if (acumulado > 16) document.body.classList.add('menu-oculto');
+    const curta = document.documentElement.scrollHeight - innerHeight < 240;
+    // só esconde depois de uma rolagem clara para baixo (toques leves não escondem)
+    if (y < 60 || noFim || curta || acumulado < -10) document.body.classList.remove('menu-oculto');
+    else if (acumulado > 70) document.body.classList.add('menu-oculto');
   }, { passive: true });
   Bus.on('rota:mudou', () => { document.body.classList.remove('menu-oculto'); acumulado = 0; });
 
