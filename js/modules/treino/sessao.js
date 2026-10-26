@@ -204,10 +204,9 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
       <div data-lista-ex>${estado.exercicios.map(htmlExercicio).join('')}</div>
       ${!estado.exercicios.length ? `<p class="sutil centro">Adicione o primeiro exercício para começar.</p>` : ''}
       <button class="btn btn-primario btn-bloco" data-acao="add-ex">${Icone.mais}<span>Adicionar exercício</span></button>
-      <div class="cartao form">
-        ${modo === 'ativo' ? `<label>Nome do treino<input class="campo" data-campo="nome" value="${esc(estado.nome)}"></label>` : ''}
+      ${modo === 'ativo' ? '' : `<div class="cartao form">
         <label>Notas do treino<textarea class="campo" data-campo="notas" rows="2" placeholder="Como foi o treino?">${esc(estado.notas || '')}</textarea></label>
-      </div>
+      </div>`}
     `;
     atualizarResumo();
     window.scrollTo(0, rolagem);
@@ -423,18 +422,21 @@ async function finalizar(estado) {
     ]);
     if (!r) return;
     if (r === 'marcar') comValor.forEach(s => { s.feita = true; });
-  } else if (!(await confirmar('Finalizar e salvar este treino?', { ok: 'Finalizar' }))) return;
+  }
 
   const final = clone(estado);
   final.fim = agoraISO();
   final.exercicios = final.exercicios
     .map(e => ({ ...e, series: e.series.filter(s => s.feita).map(({ recordes, ...s }) => s) }))
     .filter(e => e.series.length);
+  const rotina = estado.rotina_id ? await obterRotina(estado.rotina_id) : null;
+  const opcoes = await telaSalvar(estado, final, rotina);
+  if (!opcoes) return;                       // voltou para o treino
+  if (opcoes === 'descartar') { descartar(); return; }
   const salvo = await salvarTreino(final);
 
-  if (estado.rotina_id) {
-    const rotina = await obterRotina(estado.rotina_id);
-    if (rotina && await confirmar('Atualizar a rotina com as cargas e repetições de hoje?', { titulo: rotina.nome, ok: 'Atualizar' })) {
+  if (rotina) {
+    if (opcoes.atualizarRotina) {
       rotina.exercicios = final.exercicios.map(e => ({
         exercicio_id: e.exercicio_id, descanso: e.descanso, notas: e.notas,
         series: e.series.map(s => ({ tipo: s.tipo, peso: s.peso, reps: s.reps })),
@@ -445,6 +447,70 @@ async function finalizar(estado) {
   gravarDescanso(null);
   gravarAtivo(null);
   location.hash = `#/historico/${salvo.id}?novo=1`;
+}
+
+// Tela "Salvar treino" (ao tocar em Finalizar), como a do Hevy: nome, resumo,
+// notas, data e rotina. Altera "final" no lugar. Resolve com {atualizarRotina},
+// 'descartar' ou null (voltar ao treino).
+async function telaSalvar(estado, final, rotina) {
+  const mapa = await mapaDeExercicios();
+  const r = resumoTreino(final, mapa);
+  const duracao = new Date(final.fim) - new Date(final.inicio);
+  const recordes = estado.exercicios.reduce((n, e) => n + e.series.filter(x => x.feita && x.recordes?.length).length, 0);
+  return new Promise(resolve => {
+    const tela = document.createElement('div');
+    tela.className = 'tela-salvar';
+    tela.innerHTML = `
+      <header class="salvar-topo">
+        <button class="icon-btn" data-voltar aria-label="Voltar ao treino">${Icone.voltar}</button>
+        <h1>Salvar treino</h1>
+        <button class="btn btn-primario btn-pequeno" data-salvar>Salvar</button>
+      </header>
+      <div class="salvar-corpo">
+        <input class="salvar-nome" data-nome value="${esc(final.nome)}" aria-label="Nome do treino" placeholder="Nome do treino">
+        <div class="salvar-stats">
+          <div><small>Duração</small><strong class="destaque">${fmtDuracao(duracao)}</strong></div>
+          <div><small>Volume</small><strong>${fmtVolume(r.volume)}</strong></div>
+          <div><small>Séries</small><strong>${r.series}</strong></div>
+          ${recordes ? `<div><small>Recordes</small><strong class="ouro">${Icone.trofeu}${recordes}</strong></div>` : ''}
+        </div>
+        <label class="salvar-bloco"><small>Notas</small>
+          <textarea data-notas rows="3" placeholder="Como foi o treino? Deixe suas anotações aqui…">${esc(final.notas || '')}</textarea></label>
+        <label class="salvar-linha">${Icone.calendario}<span>Data</span>
+          <input type="datetime-local" data-inicio value="${dataHoraInput(final.inicio)}"></label>
+        ${rotina ? `<label class="salvar-linha">${Icone.copiar}<span>Atualizar a rotina "${esc(rotina.nome)}" com as cargas de hoje</span>
+          <input type="checkbox" class="interruptor" data-rotina checked></label>` : ''}
+        <div class="salvar-exercicios">
+          <small>Exercícios</small>
+          <ul>${final.exercicios.map(e => `<li><b>${e.series.length} ×</b><span>${esc(mapa.get(e.exercicio_id)?.nome || '?')}</span></li>`).join('')}</ul>
+        </div>
+        <button class="salvar-descartar" data-descartar>Descartar treino</button>
+      </div>`;
+    document.body.appendChild(tela);
+    document.body.classList.add('com-tela-salvar');
+    window.scrollTo(0, 0);
+    const fechar = v => { tela.remove(); document.body.classList.remove('com-tela-salvar'); resolve(v); };
+    const nome = tela.querySelector('[data-nome]'), notas = tela.querySelector('[data-notas]'), inicio = tela.querySelector('[data-inicio]');
+    // Guarda nome e notas no treino em andamento (se voltar, não perde)
+    const guardar = () => { estado.nome = nome.value.trim() || estado.nome; estado.notas = notas.value; gravarAtivo(estado); };
+    nome.oninput = notas.oninput = guardar;
+    tela.querySelector('[data-voltar]').onclick = () => { guardar(); fechar(null); };
+    tela.querySelector('[data-descartar]').onclick = async () => {
+      if (await confirmar('Descartar este treino? Os dados registrados serão perdidos.', { ok: 'Descartar', perigo: true })) fechar('descartar');
+    };
+    tela.querySelector('[data-salvar]').onclick = () => {
+      guardar();
+      final.nome = estado.nome;
+      final.notas = estado.notas;
+      // Mudou a data: mantém a duração
+      const ini = inicio.value ? new Date(inicio.value) : null;
+      if (ini && !isNaN(ini) && dataHoraInput(final.inicio) !== inicio.value) {
+        final.inicio = ini.toISOString();
+        final.fim = new Date(ini.getTime() + duracao).toISOString();
+      }
+      fechar({ atualizarRotina: !!tela.querySelector('[data-rotina]')?.checked });
+    };
+  });
 }
 
 function descartar() {
