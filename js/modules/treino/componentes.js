@@ -174,8 +174,8 @@ export function escolherRir(atual) {
     conteudo: (corpo, fechar) => {
       corpo.innerHTML = `
         <p class="sutil" style="margin-top:0">Quantas repetições ainda daria para fazer?</p>
-        <div class="grade-opcoes">${[0, 1, 2, 3, 4, 5].map(v =>
-          `<button class="chip ${v === atual ? 'ativo' : ''}" data-v="${v}"><strong>${v === 5 ? '5+' : v}</strong>${v === 0 ? ' falha' : ''}</button>`).join('')}</div>
+        <div class="grade-opcoes grade-rir">${[0, 0.5, 1, 2, 3, 4, 5].map(v =>
+          `<button class="chip ${v === atual ? 'ativo' : ''} ${v <= 0.5 ? 'rir-largo' : ''}" data-v="${v}"><strong>${fmtRir(v)}</strong>${v === 0 ? '<small>falha</small>' : v === 0.5 ? '<small>talvez mais uma</small>' : ''}</button>`).join('')}</div>
         ${atual !== null && atual !== undefined ? '<button class="btn btn-secundario btn-bloco" data-limpar style="margin-top:10px">Limpar</button>' : ''}`;
       corpo.querySelectorAll('[data-v]').forEach(b => b.onclick = () => fechar(Number(b.dataset.v)));
       corpo.querySelector('[data-limpar]')?.addEventListener('click', () => fechar(null));
@@ -183,4 +183,4 @@ export function escolherRir(atual) {
   });
 }
 
-export const fmtRir = v => (v === null || v === undefined ? '' : v >= 5 ? '5+' : String(v));
+export const fmtRir = v => (v === null || v === undefined ? '' : v >= 5 ? '5+' : String(v).replace('.', ','));

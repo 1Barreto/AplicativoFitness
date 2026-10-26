@@ -7,7 +7,7 @@ import {
   listarTreinos, obterTreino, salvarTreino, excluirTreino, mapaDeExercicios, resumoTreino, mapaDeRecordes,
   NOMES_RECORDE, TIPOS_SERIE, TIPOS_EXERCICIO, salvarRotina, listarRotinas,
 } from './dados.js';
-import { rotulosSeries } from './componentes.js';
+import { rotulosSeries, fmtRir } from './componentes.js';
 import { montarEditor, iniciarTreino } from './sessao.js';
 
 async function telaLista(el) {
@@ -78,7 +78,7 @@ async function telaDetalhe(el, { id }, query) {
           <tbody>${e.series.map((s, j) => `
             <tr>
               <td><span class="tipo-serie mini ${TIPOS_SERIE[s.tipo]?.classe || ''}">${rot[j]}</span></td>
-              <td>${fmtNum(s.peso) || '–'}</td><td>${fmtNum(s.reps) || '–'}</td>${e.series.some(x => x.rir != null) ? `<td>${s.rir != null ? (s.rir >= 5 ? '5+' : s.rir) : '–'}</td>` : ''}
+              <td>${fmtNum(s.peso) || '–'}</td><td>${fmtNum(s.reps) || '–'}</td>${e.series.some(x => x.rir != null) ? `<td>${s.rir != null ? fmtRir(s.rir) : '–'}</td>` : ''}
               <td>${recordes.has(s.uid) ? `<span class="selo" title="${recordes.get(s.uid).map(x => NOMES_RECORDE[x]).join(', ')}">${Icone.trofeu}${recordes.get(s.uid).map(x => NOMES_RECORDE[x]).join(' · ')}</span>` : ''}</td>
             </tr>`).join('')}</tbody>
         </table>

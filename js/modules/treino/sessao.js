@@ -34,7 +34,8 @@ function gravarDescanso(d) {
   if (d) localStorage.setItem(CHAVE_DESCANSO, JSON.stringify(d)); else localStorage.removeItem(CHAVE_DESCANSO);
 }
 
-const novaSerie = (base = {}) => ({ uid: uuid(), tipo: base.tipo || 'N', peso: base.peso ?? null, reps: base.reps ?? null, feita: false });
+// RIR começa em 0 (até a falha); toque no botão para mudar
+const novaSerie = (base = {}) => ({ uid: uuid(), tipo: base.tipo || 'N', peso: base.peso ?? null, reps: base.reps ?? null, rir: base.rir ?? 0, feita: false });
 
 // Inicia um treino a partir de uma rotina, de um treino anterior ou vazio.
 export async function iniciarTreino({ rotina = null, modelo = null } = {}) {
