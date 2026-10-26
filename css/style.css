@@ -53,7 +53,8 @@
 [data-tema="coral"]   { --p: #ff4d5e; --p-rgb: 255, 77, 94; --p-claro: #ff8c97; --p-forte: #e63446; --sobre-p: #ffffff; --s: #ffc24d; --s-rgb: 255, 194, 77; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+* { touch-action: manipulation; }
 body {
   margin: 0;
   background: var(--fundo);
