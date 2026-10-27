@@ -57,7 +57,7 @@ async function renderizar({ preservarRolagem = false } = {}) {
 
 function montarAbas() {
   document.getElementById('tabbar').innerHTML = Modulos.abas().map(a =>
-    `<a href="#${a.rota}" data-rota="${a.rota}" data-inclui="${(a.inclui || []).join(',')}">${a.icone}<span>${a.nome}</span></a>`).join('');
+    `<a href="#${a.rota}" aria-label="${a.nome}" data-rota="${a.rota}" data-inclui="${(a.inclui || []).join(',')}">${a.icone}<span>${a.nome}</span></a>`).join('');
   // Troca de aba já no toque: no iPhone, com a tela ainda deslizando, o Safari usa o
   // primeiro toque só para parar a rolagem e não manda o "click". Então, se a tela rolou
   // há pouco, a aba troca no instante em que o dedo encosta; parada, troca ao soltar.
