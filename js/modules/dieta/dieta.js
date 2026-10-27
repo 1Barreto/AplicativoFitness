@@ -223,9 +223,10 @@ async function telaDieta(el, _p, query) {
       ]);
       if (!op) return;
       if (op === 'salvar') {
-        if (!await confirmar(`Trocar o ${nomePlano} pelas refeições deste dia?`, { ok: 'Salvar plano' })) return;
+        // só as refeições com itens neste dia; as vazias mantêm o que já estava no plano
+        if (!await confirmar(`Salvar as refeições deste dia no ${nomePlano}? As refeições vazias hoje continuam como estão no plano.`, { ok: 'Salvar plano' })) return;
         let c = config;
-        for (const r of refeicoesDoTipo(config, tipo)) c = comPlano(c, tipo, r.id, doGrupo(r));
+        for (const r of refeicoesDoTipo(config, tipo)) if (doGrupo(r).length) c = comPlano(c, tipo, r.id, doGrupo(r));
         await salvarConfig(c); toast(`${nomePlano[0].toUpperCase()}${nomePlano.slice(1)} atualizado`, 'sucesso'); recarregar();
         return;
       }
