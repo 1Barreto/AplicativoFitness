@@ -107,7 +107,7 @@ async function iniciar() {
     if (rotaAtual && rotaAtual.recarregar !== false) renderizar({ preservarRolagem: true });
   });
 
-  // Menu de baixo dinâmico (celular): some ao rolar para baixo, volta ao rolar para cima
+  // Menu de baixo dinâmico (celular): encolhe ao rolar para baixo, volta ao tamanho normal ao rolar para cima
   let ultimoY = window.scrollY, acumulado = 0;
   addEventListener('scroll', () => {
     const y = window.scrollY, d = y - ultimoY;
@@ -115,11 +115,11 @@ async function iniciar() {
     acumulado = Math.sign(d) === Math.sign(acumulado) ? acumulado + d : d;
     const noFim = innerHeight + y >= document.documentElement.scrollHeight - 4;
     const curta = document.documentElement.scrollHeight - innerHeight < 240;
-    // só esconde depois de uma rolagem clara para baixo (toques leves não escondem)
-    if (y < 60 || noFim || curta || acumulado < -10) document.body.classList.remove('menu-oculto');
-    else if (acumulado > 70) document.body.classList.add('menu-oculto');
+    // só encolhe depois de uma rolagem clara para baixo (toques leves não mudam)
+    if (y < 60 || noFim || curta || acumulado < -10) document.body.classList.remove('menu-compacto');
+    else if (acumulado > 70) document.body.classList.add('menu-compacto');
   }, { passive: true });
-  Bus.on('rota:mudou', () => { document.body.classList.remove('menu-oculto'); acumulado = 0; });
+  Bus.on('rota:mudou', () => { document.body.classList.remove('menu-compacto'); acumulado = 0; });
 
   // Sem zoom de pinça: o Safari do iPhone ignora "user-scalable=no", então
   // bloqueia o gesto de dois dedos aqui.

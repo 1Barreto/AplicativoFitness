@@ -1304,11 +1304,17 @@ body.com-tela-salvar .tabbar, body.com-tela-salvar .barra-treino, body.com-tela-
   .tabbar a { border-radius: 14px; font-size: 11px; gap: 2px; }
   .tabbar a svg { width: 20px; height: 20px; }
 }
-/* Menu some ao rolar para baixo (celular) */
+/* Menu encolhe ao rolar para baixo (celular, estilo Instagram) */
 @media (max-width: 899px) {
-  .tabbar, .barra-treino { transition: transform .28s cubic-bezier(.2, .8, .2, 1), opacity .28s; }
-  body.menu-oculto .tabbar { transform: translateY(calc(100% + var(--abas-fundo) + 12px)); opacity: 0; pointer-events: none; }
-  body.menu-oculto .barra-treino { transform: translateY(calc(var(--abas) + 2px)); }
+  .tabbar { transition: height .28s cubic-bezier(.2, .8, .2, 1), left .28s cubic-bezier(.2, .8, .2, 1), right .28s cubic-bezier(.2, .8, .2, 1), padding .28s, border-radius .28s; }
+  .tabbar a, .tabbar a svg { transition: width .28s, height .28s, gap .28s, border-radius .28s; }
+  .tabbar a span { transition: opacity .2s, max-height .28s, font-size .28s; max-height: 16px; overflow: hidden; }
+  .barra-treino { transition: transform .28s cubic-bezier(.2, .8, .2, 1); }
+  body.menu-compacto .tabbar { height: 44px; padding: 4px; border-radius: 18px; left: calc(48px + var(--seg-esq)); right: calc(48px + var(--seg-dir)); }
+  body.menu-compacto .tabbar a { gap: 0; border-radius: 12px; }
+  body.menu-compacto .tabbar a svg { width: 19px; height: 19px; }
+  body.menu-compacto .tabbar a span { opacity: 0; max-height: 0; font-size: 0; }
+  body.menu-compacto .barra-treino { transform: translateY(calc(var(--abas) - 44px)); }
 }
 /* Toque imediato no menu (sem atraso de toque duplo no iPhone) */
 .tabbar, .tabbar a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
