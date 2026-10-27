@@ -1330,7 +1330,7 @@ body.com-tela-salvar .tabbar, body.com-tela-salvar .barra-treino, body.com-tela-
    com a tela deslizando). */
 html, body { height: 100%; overflow: hidden; }
 body { min-height: 0; }
-#app { height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; }
+#app { position: fixed; inset: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; }
 body.com-modal #app, body.com-tela-salvar #app { overflow: hidden; }
 
 /* Celular: menu só com ícones; ao encolher, só os ícones diminuem */
