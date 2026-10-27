@@ -1402,3 +1402,12 @@ body.modo-sessao #app { padding-top: 0; }
 .sessao-topo.sessao-topo-fixa { position: fixed; top: 0; left: 0; right: 0; margin: 0; z-index: 20; padding: calc(10px + var(--seg-topo)) 16px 10px; }
 body.modo-sessao #app { padding-top: var(--sessao-topo, 0px); }
 body.com-tela-salvar .sessao-topo-fixa { display: none; }
+
+/* Próximo treino: primeiro exercício e o que foi feito da última vez */
+.prox-primeiro { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: #141416; text-align: left; width: 100%; margin: 4px 0 12px; }
+.prox-primeiro .ex-avatar { width: 44px; height: 44px; flex: none; }
+.prox-primeiro-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prox-primeiro-info small { color: var(--texto-2); font-size: 12px; }
+.prox-primeiro-info strong { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prox-primeiro-series { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.prox-primeiro-series span { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 8px; background: rgba(255, 255, 255, .06); font-variant-numeric: tabular-nums; }

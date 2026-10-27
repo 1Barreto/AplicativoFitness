@@ -6,7 +6,7 @@ import { Icone, definirTitulo, toast, confirmar, menu, vazio } from '../../core/
 import { criarGrafico } from '../../core/graficos.js';
 import {
   T, listarRotinas, obterRotina, salvarRotina, excluirRotina, mapaDeExercicios, obterExercicio, excluirExercicio, salvarExercicio,
-  historicoExercicio, melhoresDeSeries, TIPOS_SERIE, TIPOS_EXERCICIO, descansoDe, listarTreinos, resumoTreino, proximaRotina,
+  historicoExercicio, melhoresDeSeries, TIPOS_SERIE, TIPOS_EXERCICIO, descansoDe, listarTreinos, resumoTreino, proximaRotina, ultimasSeries,
 } from './dados.js';
 import { montarListaExercicios, escolherExercicios, formularioExercicio, escolherTipoSerie, rotulosSeries, escolherDescanso } from './componentes.js';
 import { iniciarTreino, obterAtivo } from './sessao.js';
@@ -287,17 +287,41 @@ async function cartaoProximo(el) {
     el.innerHTML = `<a class="cartao cartao-destaque" href="#/treino/ativo">${Icone.play}<div><small>Treino em andamento</small><strong>${esc(ativo.nome)}</strong></div>${Icone.seta}</a>`;
     return;
   }
+  const primeiro = await primeiroExercicio(prox);
   el.innerHTML = `
     <div class="cartao ${prox ? 'cartao-prox-treino' : ''}">
       <div class="cartao-cab">${Icone.treino}<h3>Próximo treino</h3></div>
       ${prox ? `
         <div class="prox-treino-corpo"><p class="destaque-grande">${esc(prox.nome)}</p>
+        ${primeiro}
         <button class="btn btn-primario btn-bloco" data-iniciar>${Icone.play}<span>Iniciar ${esc(prox.nome)}</span></button></div>`
       : `<p class="sutil">Crie sua primeira rotina para receber sugestões.</p>
          <div class="linha-botoes"><a class="btn btn-primario" href="#/treino/rotina/nova">Criar rotina</a><button class="btn btn-secundario" data-vazio>Treino vazio</button></div>`}
     </div>`;
   el.querySelector('[data-iniciar]')?.addEventListener('click', () => iniciarTreino({ rotina: prox }));
   el.querySelector('[data-vazio]')?.addEventListener('click', () => iniciarTreino());
+}
+
+// Primeiro exercício da rotina com o que foi feito da última vez (sem aquecimento)
+async function primeiroExercicio(rotina) {
+  const item = rotina?.exercicios?.[0];
+  if (!item) return '';
+  const ex = (await mapaDeExercicios()).get(item.exercicio_id);
+  if (!ex) return '';
+  const ultima = await ultimasSeries(item.exercicio_id);
+  const validas = (ultima?.series || []).filter(x => x.tipo !== 'A');
+  const series = validas.length ? validas : (ultima?.series || []);
+  const fmt = x => x.peso != null && x.reps != null ? `${fmtNum(x.peso)} kg × ${x.reps}` : x.reps != null ? `${x.reps} reps` : x.peso != null ? fmtKg(x.peso) : '';
+  const linhas = series.map(fmt).filter(Boolean);
+  return `
+    <div class="prox-primeiro">
+      ${avatarExercicio(ex, 'ex-avatar')}
+      <div class="prox-primeiro-info">
+        <small>1º exercício${ultima ? ` · última vez ${fmtRelativo(ultima.treino.inicio).toLowerCase()}` : ''}</small>
+        <strong>${esc(ex.nome)}</strong>
+        ${linhas.length ? `<div class="prox-primeiro-series">${linhas.slice(0, 5).map(l => `<span>${esc(l)}</span>`).join('')}${linhas.length > 5 ? `<span>+${linhas.length - 5}</span>` : ''}</div>` : '<span class="sutil">Sem registro anterior</span>'}
+      </div>
+    </div>`;
 }
 
 async function cartaoUltimo(el) {
