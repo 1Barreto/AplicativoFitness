@@ -107,16 +107,27 @@ async function iniciar() {
     if (rotaAtual && rotaAtual.recarregar !== false) renderizar({ preservarRolagem: true });
   });
 
-  // Menu de baixo dinâmico (celular): encolhe ao rolar para baixo, volta ao tamanho normal ao rolar para cima
-  let ultimoY = window.scrollY, acumulado = 0;
+  // Menu de baixo dinâmico (celular): encolhe ao rolar para baixo, volta ao tamanho normal
+  // só quando você rola para cima de propósito. O "quique" do fim da página (o Safari
+  // devolve a tela um pouco sozinho) não conta: a subida só vale se o último gesto do
+  // dedo foi para cima, e posições além do fim da página são ignoradas.
+  const maxY = () => document.documentElement.scrollHeight - innerHeight;
+  const limitar = y => Math.min(Math.max(y, 0), Math.max(maxY(), 0));
+  let ultimoY = limitar(window.scrollY), acumulado = 0, dedoY = null, gestoSobe = true;
+  addEventListener('touchstart', ev => { dedoY = ev.touches[0].clientY; }, { passive: true });
+  addEventListener('touchmove', ev => {
+    const yDedo = ev.touches[0].clientY;
+    if (dedoY != null && Math.abs(yDedo - dedoY) > 4) gestoSobe = yDedo > dedoY; // dedo descendo = conteúdo sobe
+    dedoY = yDedo;
+  }, { passive: true });
+  addEventListener('wheel', ev => { gestoSobe = ev.deltaY < 0; }, { passive: true });
   addEventListener('scroll', () => {
-    const y = window.scrollY, d = y - ultimoY;
+    const y = limitar(window.scrollY), d = y - ultimoY;
     ultimoY = y;
+    if (!d) return;
     acumulado = Math.sign(d) === Math.sign(acumulado) ? acumulado + d : d;
-    const noFim = innerHeight + y >= document.documentElement.scrollHeight - 4;
-    const curta = document.documentElement.scrollHeight - innerHeight < 240;
-    // só encolhe depois de uma rolagem clara para baixo (toques leves não mudam)
-    if (y < 60 || noFim || curta || acumulado < -140) document.body.classList.remove('menu-compacto');
+    const curta = maxY() < 240;
+    if (y < 60 || curta || (acumulado < -140 && gestoSobe)) document.body.classList.remove('menu-compacto');
     else if (acumulado > 70) document.body.classList.add('menu-compacto');
   }, { passive: true });
   Bus.on('rota:mudou', () => { document.body.classList.remove('menu-compacto'); acumulado = 0; });
