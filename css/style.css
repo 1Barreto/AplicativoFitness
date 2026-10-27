@@ -1362,3 +1362,13 @@ body.com-modal #app, body.com-tela-salvar #app { overflow: hidden; }
   }
   .tabbar a.ativa svg { filter: drop-shadow(0 0 8px rgba(var(--p-rgb), .45)); }
 }
+
+/* Barra de cima mais baixa no celular; pílula de sincronização só em caso de erro */
+.sync-pill[hidden] { display: none !important; }
+@media (max-width: 899px) {
+  :root { --topo: 46px; }
+  .topbar-title { font-size: 19px; }
+  .topbar-actions .icon-btn { width: 34px; height: 34px; }
+  .topbar-actions .icon-btn svg { width: 19px; height: 19px; }
+  .topbar-back svg { width: 24px; height: 24px; }
+}

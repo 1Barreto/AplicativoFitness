@@ -99,6 +99,8 @@ function mostrarEstadoSync(info) {
   b.className = `sync-pill estado-${info.estado}`;
   b.innerHTML = `<i></i><span>${rotulo}</span>`;
   b.title = info.erro ? `${dica}\n${info.erro}` : dica;
+  // O status fica em Ajustes; no topo só aparece quando dá erro
+  b.hidden = info.estado !== 'erro';
 }
 
 async function iniciar() {
