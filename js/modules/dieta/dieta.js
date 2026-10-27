@@ -2,13 +2,13 @@
 // personalizados, refeições salvas e metas. Alimentos da TBCA-USP.
 
 import { Modulos } from '../../core/modulos.js';
-import { esc, fmtNum, clone } from '../../core/util.js';
+import { esc, fmtNum, clone, normalizar } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio, folha } from '../../core/ui.js';
 import { pesoAtual } from '../corpo/dados.js';
 import {
   T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, excluirItem, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
-  copiaAlimento, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS,
+  copiaAlimento, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS, refeicoesDoTipo, planoDe, comPlano, aplicarPlano,
 } from './dados.js';
 import { escolherAlimentos, escolherQuantidade, formularioAlimento, formularioMetas, barraMacros, linhaMacros } from './componentes.js';
 
@@ -102,10 +102,6 @@ async function telaDieta(el, _p, query) {
   const [config, itens, comRegistro] = await Promise.all([obterConfig(), itensDoDia(dia), diasComRegistro()]);
   const total = somar(consumidos(itens));
   const plano = somar(itens);
-  const refeicoes = [...config.refeicoes];
-  const ids = new Set(refeicoes.map(r => r.id));
-  if (itens.some(i => !ids.has(i.refeicao))) refeicoes.push({ id: '__outros', nome: 'Outros' });
-  const doGrupo = r => itens.filter(i => (ids.has(i.refeicao) ? i.refeicao : '__outros') === r.id);
 
   // Semana do dia escolhido (segunda a domingo)
   const d0 = dataDe(dia);
@@ -116,6 +112,15 @@ async function telaDieta(el, _p, query) {
   const metasDia = d => todasMetas[tipos[d].tipo] || {};
   const tipoDia = tipos[dia];
   const metas = metasDia(dia);
+
+  // Refeições do tipo do dia (as de outro tipo só aparecem se tiverem itens)
+  const ids = new Set(config.refeicoes.map(r => r.id));
+  const refeicoes = config.refeicoes.filter(r => !r.so || r.so === tipoDia.tipo || itens.some(i => i.refeicao === r.id));
+  if (itens.some(i => !ids.has(i.refeicao))) refeicoes.push({ id: '__outros', nome: 'Outros' });
+  const doGrupo = r => itens.filter(i => (ids.has(i.refeicao) ? i.refeicao : '__outros') === r.id);
+  const planoDia = planoDe(config, tipoDia.tipo);
+  const temPlano = refeicoesDoTipo(config, tipoDia.tipo).some(r => planoDia[r.id]?.length);
+  const nomePlano = tipoDia.tipo === 'treino' ? 'plano de treino' : 'plano off';
   const ir = d => { location.hash = d === hojeISO() ? '#/dieta' : `#/dieta?dia=${d}`; };
 
   el.classList.add('tela-dieta');
@@ -150,12 +155,14 @@ async function telaDieta(el, _p, query) {
           <button class="chip" data-acao="metas">${Icone.medidor}<span>Metas</span></button>
           <a class="chip" href="#/dieta/alimentos">${Icone.dieta}<span>Meus alimentos</span></a>
           <a class="chip" href="#/dieta/refeicoes">${Icone.copiar}<span>Refeições</span></a>
+          ${!itens.length && temPlano ? '' : `<button class="chip" data-acao="plano">${Icone.check}<span>Aplicar ${nomePlano}</span></button>`}
           ${!itens.length ? `<button class="chip" data-acao="copiar-dia">${Icone.historico}<span>Copiar dia anterior</span></button>` : ''}
         </nav>
         ${cartaoSemana(semana, totaisSemana, metasDia, dia, tipos)}
       </div>
 
       <div class="dieta-refeicoes">
+        ${!itens.length && temPlano ? `<button class="btn btn-primario btn-bloco btn-aplicar-plano" data-acao="plano">${Icone.check}<span>Aplicar ${nomePlano}</span></button>` : ''}
         <div class="dieta-colunas" aria-hidden="true"><span>Alimento</span><span>Quantidade</span><span>Proteína</span><span>Carbo</span><span>Gordura</span><span>kcal</span><span></span></div>
         ${refeicoes.map(r => {
           const lista = doGrupo(r);
@@ -201,6 +208,33 @@ async function telaDieta(el, _p, query) {
     const novas = await formularioMetas(todasMetas, peso, tipoDia.tipo);
     if (novas) { await salvarConfig({ ...config, metas: novas }); toast('Metas salvas', 'sucesso'); recarregar(); }
   });
+  el.querySelectorAll('[data-acao=plano]').forEach(b => b.onclick = async () => {
+    const tipo = tipoDia.tipo;
+    if (!temPlano) {
+      if (await confirmar(`O ${nomePlano} ainda está vazio. Montar agora?`, { ok: 'Montar plano' })) location.hash = `#/dieta/refeicoes?plano=${tipo}`;
+      return;
+    }
+    let substituir = false;
+    if (itens.length) {
+      const op = await menu(`Aplicar ${nomePlano}`, [
+        { texto: 'Preencher só as refeições vazias', valor: 'vazias', icone: Icone.mais },
+        { texto: 'Substituir as refeições não feitas', valor: 'substituir', icone: Icone.copiar },
+        { texto: `Salvar este dia como ${nomePlano}`, valor: 'salvar', icone: Icone.editar },
+      ]);
+      if (!op) return;
+      if (op === 'salvar') {
+        if (!await confirmar(`Trocar o ${nomePlano} pelas refeições deste dia?`, { ok: 'Salvar plano' })) return;
+        let c = config;
+        for (const r of refeicoesDoTipo(config, tipo)) c = comPlano(c, tipo, r.id, doGrupo(r));
+        await salvarConfig(c); toast(`${nomePlano[0].toUpperCase()}${nomePlano.slice(1)} atualizado`, 'sucesso'); recarregar();
+        return;
+      }
+      substituir = op === 'substituir';
+    }
+    const n = await aplicarPlano(config, tipo, dia, { substituir });
+    toast(n ? `${n} ${n === 1 ? 'refeição planejada' : 'refeições planejadas'}` : 'Nenhuma refeição para preencher', n ? 'sucesso' : undefined);
+    recarregar();
+  });
   el.querySelector('[data-acao=copiar-dia]')?.addEventListener('click', async () => {
     const ontem = await itensDoDia(somarDias(dia, -1));
     if (!ontem.length) { toast('O dia anterior não tem registros'); return; }
@@ -235,12 +269,21 @@ async function telaDieta(el, _p, query) {
     card.querySelector('[data-acao=menu-ref]').onclick = async () => {
       const lista = doGrupo(ref);
       const op = await menu(ref.nome, [
+        ...(ref.id !== '__outros' && planoDia[ref.id]?.length && !refeicaoFeita(lista) ? [{ texto: `Usar o ${nomePlano}`, valor: 'usar-plano', icone: Icone.check }] : []),
+        ...(lista.length && ref.id !== '__outros' ? [{ texto: `Salvar no ${nomePlano}`, valor: 'salvar-plano', icone: Icone.editar }] : []),
         ...(lista.length ? [{ texto: 'Salvar como refeição pronta', valor: 'salvar', icone: Icone.copiar }] : []),
         ...(ref.id !== '__outros' ? [{ texto: 'Copiar do dia anterior', valor: 'copiar', icone: Icone.historico }] : []),
         ...(ref.id !== '__outros' ? [{ texto: 'Renomear', valor: 'renomear', icone: Icone.editar }] : []),
         ...(lista.length ? [{ texto: 'Limpar refeição', valor: 'limpar', icone: Icone.lixo, perigo: true }] : []),
       ]);
-      if (op === 'salvar') {
+      if (op === 'usar-plano') {
+        if (lista.length && !await confirmar(`Trocar os itens de ${esc(ref.nome)} pelo ${nomePlano}?`, { ok: 'Trocar' })) return;
+        await aplicarPlano(config, tipoDia.tipo, dia, { substituir: true, so: ref.id });
+        recarregar();
+      } else if (op === 'salvar-plano') {
+        await salvarConfig(comPlano(config, tipoDia.tipo, ref.id, lista));
+        toast(`${esc(ref.nome)} salvo no ${nomePlano}`, 'sucesso');
+      } else if (op === 'salvar') {
         const nome = await pedirTexto('Nome da refeição pronta', ref.nome, { placeholder: 'Ex.: Café padrão' });
         if (!nome) return;
         await salvarRefeicaoSalva({ nome, itens: lista.map(i => ({ alimento: copiaAlimento(i.alimento), gramas: i.gramas, porcao: i.porcao })) });
@@ -314,56 +357,117 @@ async function telaAlimentos(el) {
   });
 }
 
-// ---------- Refeições do dia e refeições salvas ----------
-async function telaRefeicoes(el) {
+// ---------- Planos (dia de treino x dia off) e refeições salvas ----------
+const NOME_PLANO = { treino: 'Dia de treino', off: 'Dia off' };
+
+// Refeição salva que combina com uma refeição do plano: no plano off, prefere a
+// que tem "off" no nome ("Almoço Dia Off"); no de treino, a de nome igual.
+function salvaParaPlano(salvas, nomeRef, tipo) {
+  const alvo = normalizar(nomeRef);
+  const n = x => normalizar(x.nome);
+  const temOff = x => /\boff\b/.test(n(x));
+  const contem = salvas.filter(x => n(x).includes(alvo));
+  if (tipo === 'off') return contem.find(temOff) || contem.find(x => n(x) === alvo) || null;
+  return contem.find(x => n(x) === alvo) || contem.find(x => !temOff(x)) || null;
+}
+
+async function telaRefeicoes(el, _p, query = {}) {
   definirTitulo('Refeições', { voltar: '#/dieta' });
-  const [config, salvas] = await Promise.all([obterConfig(), listarRefeicoesSalvas()]);
+  const [config, salvas, tipos] = await Promise.all([obterConfig(), listarRefeicoesSalvas(), tiposDosDias([hojeISO()])]);
+  const tipo = query.plano === 'off' || query.plano === 'treino' ? query.plano : tipos[hojeISO()].tipo;
+  const plano = planoDe(config, tipo);
+  const doTipo = refeicoesDoTipo(config, tipo);
+  const total = somar(doTipo.flatMap(r => plano[r.id] || []));
+  const meta = metasDe(config)[tipo] || {};
+  const vazias = doTipo.filter(r => !plano[r.id]?.length && salvaParaPlano(salvas, r.nome, tipo));
+
   el.innerHTML = `
-    <h2 class="secao">Refeições do dia <small>${config.refeicoes.length}</small></h2>
-    <p class="sutil pequeno">Os blocos que aparecem no diário. Renomeie, reordene ou crie (ex.: Pré-treino, Pós-treino).</p>
-    <div class="cartao lista-simples">
-      ${config.refeicoes.map((r, i) => `
-        <div class="linha-lista linha-refeicao" data-i="${i}">
-          <span class="item-texto"><strong>${esc(r.nome)}</strong><small>${r.horario ? `por volta das ${esc(r.horario)}` : 'sem horário'}</small></span>
-          <button class="icon-btn" data-mover="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir">${Icone.cima}</button>
-          <button class="icon-btn" data-mover="1" ${i === config.refeicoes.length - 1 ? 'disabled' : ''} aria-label="Descer">${Icone.baixo}</button>
-          <button class="icon-btn" data-acao="op" aria-label="Opções">${Icone.pontos}</button>
-        </div>`).join('')}
+    <div class="segmento tipo-dia plano-tipo" data-plano-tipo>
+      ${Object.entries(NOME_PLANO).map(([k, nome]) => `<button data-t="${k}" class="${tipo === k ? 'ativo' : ''}">${k === 'treino' ? Icone.treino : Icone.hoje}<span>${nome}</span></button>`).join('')}
     </div>
+    <h2 class="secao">Plano · ${NOME_PLANO[tipo]}</h2>
+    <p class="sutil pequeno">As refeições e alimentos que o botão "Aplicar plano", na Dieta, coloca no dia como planejados. Toque numa refeição para montar.</p>
+    <section class="cartao plano-total">
+      <div class="refeicao-topo"><div class="refeicao-titulo"><h3>Total do plano</h3>${linhaMacros(total)}</div><span class="refeicao-kcal">${fmtKcal(total.kcal)}<small>${meta.kcal ? ` / ${fmtKcal(meta.kcal)} kcal` : 'kcal'}</small></span></div>
+    </section>
+    <div class="cartao lista-simples">
+      ${doTipo.map((r, i) => {
+        const itens = plano[r.id] || [];
+        const t = somar(itens);
+        return `
+        <div class="linha-lista linha-refeicao" data-id="${esc(r.id)}">
+          <a class="item-texto" href="#/dieta/plano/${tipo}/${encodeURIComponent(r.id)}"><strong>${esc(r.nome)}${r.so ? ` <small class="selo-so">só ${r.so === 'treino' ? 'treino' : 'off'}</small>` : ''}</strong>
+            <small>${itens.length ? `${fmtKcal(t.kcal)} kcal · ${itens.map(x => esc(x.alimento.nome.split(/[,(]/)[0].trim())).join(' · ')}` : 'Sem alimentos no plano · toque para montar'}</small></a>
+          <button class="icon-btn" data-mover="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir">${Icone.cima}</button>
+          <button class="icon-btn" data-mover="1" ${i === doTipo.length - 1 ? 'disabled' : ''} aria-label="Descer">${Icone.baixo}</button>
+          <button class="icon-btn" data-acao="op" aria-label="Opções">${Icone.pontos}</button>
+        </div>`;
+      }).join('')}
+    </div>
+    ${vazias.length ? `<button class="btn btn-secundario btn-bloco" data-acao="preencher">${Icone.copiar}<span>Preencher com as refeições salvas (${vazias.length})</span></button>` : ''}
     <button class="btn btn-secundario btn-bloco" data-acao="nova-ref">${Icone.mais}<span>Nova refeição do dia</span></button>
 
     <h2 class="secao">Refeições salvas <small>${salvas.length}</small></h2>
     <p class="sutil pequeno">Combinações prontas para adicionar com um toque (ex.: "Café padrão").</p>
-    ${salvas.length ? `<div class="grade-cartoes">${salvas.map(s => {
-      const t = somar(s.itens);
-      return `<a class="cartao refeicao-salva" href="#/dieta/refeicao/${s.id}">
-        <div class="refeicao-topo"><div class="refeicao-titulo"><h3>${esc(s.nome)}</h3>${linhaMacros(t)}</div><span class="refeicao-kcal">${fmtKcal(t.kcal)}<small>kcal</small></span></div>
-        <p class="sutil pequeno">${s.itens.map(i => esc(i.alimento.nome.split(',')[0])).join(' · ')}</p>
+    ${salvas.length ? `<div class="grade-cartoes">${salvas.map(x => {
+      const t = somar(x.itens);
+      return `<a class="cartao refeicao-salva" href="#/dieta/refeicao/${x.id}">
+        <div class="refeicao-topo"><div class="refeicao-titulo"><h3>${esc(x.nome)}</h3>${linhaMacros(t)}</div><span class="refeicao-kcal">${fmtKcal(t.kcal)}<small>kcal</small></span></div>
+        <p class="sutil pequeno">${x.itens.map(i => esc(i.alimento.nome.split(',')[0])).join(' · ')}</p>
       </a>`;
     }).join('')}</div>` : ''}
     <a class="btn btn-secundario btn-bloco" href="#/dieta/refeicao/nova">${Icone.mais}<span>Criar refeição salva</span></a>`;
 
-  const salvar = async refs => { await salvarConfig({ ...config, refeicoes: refs }); telaRefeicoes(el); };
+  const recarregar = () => telaRefeicoes(el, _p, { plano: tipo });
+  const salvar = async refs => { await salvarConfig({ ...config, refeicoes: refs }); recarregar(); };
+  el.querySelector('[data-plano-tipo]').addEventListener('click', e => {
+    const b = e.target.closest('[data-t]');
+    if (b && b.dataset.t !== tipo) location.replace(`#/dieta/refeicoes?plano=${b.dataset.t}`);
+  });
+  el.querySelector('[data-acao=preencher]')?.addEventListener('click', async () => {
+    let c = config;
+    for (const r of vazias) c = comPlano(c, tipo, r.id, salvaParaPlano(salvas, r.nome, tipo).itens);
+    await salvarConfig(c);
+    toast(`${vazias.length} ${vazias.length === 1 ? 'refeição preenchida' : 'refeições preenchidas'}`, 'sucesso');
+    recarregar();
+  });
   el.querySelector('[data-acao=nova-ref]').onclick = async () => {
     const nome = await pedirTexto('Nova refeição do dia', '', { placeholder: 'Ex.: Pós-treino', ok: 'Criar' });
-    if (nome) salvar([...config.refeicoes, { id: `r${Date.now().toString(36)}`, nome }]);
+    if (!nome) return;
+    await salvar([...config.refeicoes, { id: `r${Date.now().toString(36)}`, nome, so: tipo }]);
+    toast(`Criada só para ${NOME_PLANO[tipo].toLowerCase()}. Dá para mudar no menu dela.`);
   };
   el.querySelectorAll('.linha-refeicao').forEach(linha => {
-    const i = +linha.dataset.i;
-    const r = config.refeicoes[i];
+    const r = config.refeicoes.find(x => x.id === linha.dataset.id);
+    const pos = doTipo.indexOf(r);
     linha.querySelectorAll('[data-mover]').forEach(b => b.onclick = () => {
+      // troca com a vizinha visível neste plano (na lista geral de refeições)
+      const outra = doTipo[pos + +b.dataset.mover];
       const refs = [...config.refeicoes];
-      const j = i + +b.dataset.mover;
+      const i = refs.indexOf(r), j = refs.indexOf(outra);
       [refs[i], refs[j]] = [refs[j], refs[i]];
       salvar(refs);
     });
     linha.querySelector('[data-acao=op]').onclick = async () => {
       const op = await menu(r.nome, [
+        { texto: 'Montar plano', valor: 'plano', icone: Icone.dieta },
         { texto: 'Renomear', valor: 'renomear', icone: Icone.editar },
         { texto: 'Horário', valor: 'horario', icone: Icone.timer },
+        { texto: `Aparece em: ${r.so ? `só ${NOME_PLANO[r.so].toLowerCase()}` : 'treino e off'}`, valor: 'tipos', icone: Icone.hoje },
+        ...(plano[r.id]?.length ? [{ texto: 'Limpar o plano desta refeição', valor: 'limpar', icone: Icone.lixo }] : []),
         ...(config.refeicoes.length > 1 ? [{ texto: 'Excluir', valor: 'excluir', icone: Icone.lixo, perigo: true }] : []),
       ]);
+      if (op === 'plano') location.hash = `#/dieta/plano/${tipo}/${encodeURIComponent(r.id)}`;
       if (op === 'renomear') { const nome = await pedirTexto('Renomear refeição', r.nome); if (nome) salvar(config.refeicoes.map(x => (x === r ? { ...x, nome } : x))); }
+      if (op === 'tipos') {
+        const so = await menu(`${r.nome} aparece em`, [
+          { texto: 'Dia de treino e dia off', valor: 'ambos', icone: Icone.check },
+          { texto: 'Só em dia de treino', valor: 'treino', icone: Icone.treino },
+          { texto: 'Só em dia off', valor: 'off', icone: Icone.hoje },
+        ]);
+        if (so) salvar(config.refeicoes.map(x => (x === r ? { ...x, so: so === 'ambos' ? undefined : so } : x)));
+      }
+      if (op === 'limpar') { await salvarConfig(comPlano(config, tipo, r.id, [])); recarregar(); }
       if (op === 'horario') {
         const h = await folha({
           titulo: `Horário · ${r.nome}`, classe: 'modal-pequeno',
@@ -378,6 +482,67 @@ async function telaRefeicoes(el) {
       if (op === 'excluir' && await confirmar(`Excluir "${esc(r.nome)}"? Itens já registrados nela aparecem em "Outros".`, { ok: 'Excluir', perigo: true })) salvar(config.refeicoes.filter(x => x !== r));
     };
   });
+}
+
+// Montar o plano de uma refeição (dia de treino ou off)
+async function telaPlanoRefeicao(el, { tipo, ref }) {
+  const config = await obterConfig();
+  const refeicao = config.refeicoes.find(r => r.id === decodeURIComponent(ref));
+  if (!refeicao || !NOME_PLANO[tipo]) { location.replace('#/dieta/refeicoes'); return; }
+  const voltar = `#/dieta/refeicoes?plano=${tipo}`;
+  definirTitulo(`${refeicao.nome} · ${tipo === 'treino' ? 'treino' : 'off'}`, { voltar });
+  const itens = clone(planoDe(config, tipo)[refeicao.id] || []);
+
+  const desenhar = () => {
+    const t = somar(itens);
+    el.innerHTML = `
+      <p class="sutil pequeno">Plano de <strong>${esc(refeicao.nome)}</strong> no ${NOME_PLANO[tipo].toLowerCase()}. Entra no dia como planejado quando você usa "Aplicar plano".</p>
+      <section class="cartao">
+        <div class="refeicao-topo"><div class="refeicao-titulo"><h3>Total</h3>${linhaMacros(t)}</div><span class="refeicao-kcal">${fmtKcal(t.kcal)}<small>kcal</small></span></div>
+        ${barraMacros(t)}
+        ${itens.length ? `<ul class="refeicao-itens">${itens.map((i, k) => {
+          const v = calcular(i.alimento.n, i.gramas);
+          return `<li><button data-k="${k}"><span class="item-texto"><strong>${esc(i.alimento.nome)}</strong><small>${fmtQtd(i)} · P ${fmtG(v.p)} · C ${fmtG(v.c)} · G ${fmtG(v.g)}</small></span><b>${fmtKcal(v.kcal)}</b></button></li>`;
+        }).join('')}</ul>` : '<p class="sutil">Adicione alimentos ou uma refeição salva.</p>'}
+        <button class="btn-add-alimento" data-acao="add">${Icone.mais}<span>Adicionar alimento</span></button>
+      </section>
+      <div class="rodape-acoes">
+        ${itens.length ? `<button class="btn btn-secundario perigo" data-acao="limpar">${Icone.lixo}<span>Limpar</span></button>` : '<span></span>'}
+        <button class="btn btn-primario" data-acao="salvar">Salvar plano</button>
+      </div>`;
+    el.querySelector('[data-acao=add]').onclick = async () => {
+      await escolherAlimentos({
+        titulo: `Plano · ${refeicao.nome}`,
+        refeicaoNome: refeicao.nome,
+        aoEscolher: async (alimento) => {
+          const q = await escolherQuantidade(alimento, alimento.ultimaQtd ? { gramas: alimento.ultimaQtd, porcao: alimento.ultimaPorcao } : {});
+          if (!q) return false;
+          itens.push({ alimento: copiaAlimento(q.alimento), gramas: q.gramas, porcao: q.porcao });
+          return true;
+        },
+        aoEscolherRefeicao: async (salva) => {
+          itens.push(...salva.itens.map(i => ({ alimento: copiaAlimento(i.alimento), gramas: i.gramas, porcao: i.porcao })));
+          toast(`${esc(salva.nome)} adicionada`, 'sucesso', 1400);
+          return true;
+        },
+      });
+      desenhar();
+    };
+    el.querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
+      const i = itens[+b.dataset.k];
+      const q = await escolherQuantidade(i.alimento, { gramas: i.gramas, porcao: i.porcao, botao: 'Salvar', remover: true });
+      if (!q) return;
+      if (q.remover) itens.splice(+b.dataset.k, 1); else Object.assign(i, { gramas: q.gramas, porcao: q.porcao, alimento: q.alimento === i.alimento ? i.alimento : copiaAlimento(q.alimento) });
+      desenhar();
+    });
+    el.querySelector('[data-acao=limpar]')?.addEventListener('click', () => { itens.length = 0; desenhar(); });
+    el.querySelector('[data-acao=salvar]').onclick = async () => {
+      await salvarConfig(comPlano(await obterConfig(), tipo, refeicao.id, itens));
+      toast('Plano salvo', 'sucesso');
+      location.hash = voltar;
+    };
+  };
+  desenhar();
 }
 
 async function telaRefeicaoSalva(el, { id }) {
@@ -455,8 +620,10 @@ const nomeCurto = n => {
 async function cartaoProximaRefeicao(el) {
   const hoje = hojeISO();
   const [config, itens, tipos] = await Promise.all([obterConfig(), itensDoDia(hoje), tiposDosDias([hoje])]);
-  const prox = proximaRefeicao(config.refeicoes, itens);
-  const metas = metasDe(config)[tipos[hoje].tipo] || {};
+  const tipo = tipos[hoje].tipo;
+  const refsDia = config.refeicoes.filter(r => !r.so || r.so === tipo || itens.some(i => i.refeicao === r.id));
+  const prox = proximaRefeicao(refsDia, itens);
+  const metas = metasDe(config)[tipo] || {};
   const t = somar(consumidos(itens));
   const redesenhar = () => cartaoProximaRefeicao(el);
 
@@ -470,17 +637,19 @@ async function cartaoProximaRefeicao(el) {
     return;
   }
   const planejados = itens.filter(i => i.refeicao === prox.id);
-  const ultima = planejados.length ? null : await ultimaVezDaRefeicao(prox.id, hoje);
-  const mostrar = planejados.length ? planejados : ultima?.itens;
+  const doPlano = planejados.length ? null : planoDe(config, tipo)[prox.id];
+  const ultima = planejados.length || doPlano?.length ? null : await ultimaVezDaRefeicao(prox.id, hoje);
+  const mostrar = planejados.length ? planejados : doPlano?.length ? doPlano : ultima?.itens;
   const tm = mostrar ? somar(mostrar) : null;
   const atrasada = refeicaoAtrasada(prox);
   const lista = mostrar ? `
     <div class="proxima-ultima">
-      <small>${planejados.length ? 'Planejado' : `Última vez · ${rotuloDia(ultima.dia).toLowerCase()}`} · ${fmtKcal(tm.kcal)} kcal · P ${fmtG(tm.p)} · C ${fmtG(tm.c)} · G ${fmtG(tm.g)}</small>
+      <small>${planejados.length ? 'Planejado' : doPlano?.length ? `No ${tipo === 'treino' ? 'plano de treino' : 'plano off'}` : `Última vez · ${rotuloDia(ultima.dia).toLowerCase()}`} · ${fmtKcal(tm.kcal)} kcal · P ${fmtG(tm.p)} · C ${fmtG(tm.c)} · G ${fmtG(tm.g)}</small>
       <ul>${mostrar.slice(0, 6).map(i => `<li><b>${fmtQtd(i)}</b><span>${esc(nomeCurto(i.alimento.nome))}</span></li>`).join('')}${mostrar.length > 6 ? `<li class="sutil">+ ${mostrar.length - 6} itens</li>` : ''}</ul>
     </div>` : '';
   // Planejada: só as informações (marcar como feita fica na aba Dieta)
-  const acoes = planejados.length ? '' : `${ultima ? `<button class="btn btn-primario" data-acao="repetir">${Icone.copiar}<span>Repetir</span></button>` : ''}
+  const acoes = planejados.length ? '' : doPlano?.length ? `<button class="btn btn-primario" data-acao="usar-plano">${Icone.check}<span>Usar o plano</span></button>
+       <button class="btn btn-secundario" data-acao="add">${Icone.mais}<span>Adicionar</span></button>` : `${ultima ? `<button class="btn btn-primario" data-acao="repetir">${Icone.copiar}<span>Repetir</span></button>` : ''}
        <button class="btn ${ultima ? 'btn-secundario' : 'btn-primario'}" data-acao="add">${Icone.mais}<span>${ultima ? 'Adicionar' : 'Adicionar alimento'}</span></button>`;
   const tag = planejados.length ? 'a' : 'section';
   el.innerHTML = `
@@ -502,6 +671,11 @@ async function cartaoProximaRefeicao(el) {
     ev.currentTarget.classList.add('ativo');
     await marcarRefeicaoFeita(planejados, true);
     toast(`${esc(prox.nome)} feita`, 'sucesso', 1400);
+    redesenhar();
+  });
+  el.querySelector('[data-acao=usar-plano]')?.addEventListener('click', async () => {
+    await aplicarPlano(config, tipo, hoje, { so: prox.id });
+    toast(`${esc(prox.nome)} planejado`, 'sucesso', 1400);
     redesenhar();
   });
   el.querySelector('[data-acao=add]')?.addEventListener('click', async () => { if (await adicionarAlimentos({ dia: hoje, refeicao: prox })) redesenhar(); });
@@ -544,6 +718,7 @@ Modulos.registrar({
     '/dieta/alimentos': telaAlimentos,
     '/dieta/refeicoes': telaRefeicoes,
     '/dieta/refeicao/:id': { view: telaRefeicaoSalva, recarregar: false },
+    '/dieta/plano/:tipo/:ref': { view: telaPlanoRefeicao, recarregar: false },
   },
   cartoesHoje: [{ ordem: 5, render: cartaoProximaRefeicao }, { ordem: 15, render: cartaoDieta }],
 });

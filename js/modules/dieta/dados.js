@@ -122,6 +122,48 @@ export async function marcarTipoDia(dia, tipo) {
   return DB.salvar(T.dias, { ...(atual || {}), dia, tipo });
 }
 
+// ---------- Planos de dieta: dia de treino x dia off ----------
+// config.planos[tipo][refeicaoId] = [{ alimento, gramas, porcao }]
+// Cada refeição do dia pode ser só de um tipo (r.so = 'treino' | 'off') ou dos dois.
+export const refeicoesDoTipo = (config, tipo) => config.refeicoes.filter(r => !r.so || r.so === tipo);
+export const planoDe = (config, tipo) => config.planos?.[tipo] || {};
+export function comPlano(config, tipo, refeicaoId, itens) {
+  const planos = { treino: {}, off: {}, ...(config.planos || {}) };
+  const doTipo = { ...planos[tipo] };
+  if (itens?.length) doTipo[refeicaoId] = itens.map(i => ({ alimento: copiaAlimento(i.alimento), gramas: i.gramas, porcao: i.porcao ?? null }));
+  else delete doTipo[refeicaoId];
+  return { ...config, planos: { ...planos, [tipo]: doTipo } };
+}
+// Coloca o plano no dia como planejado (não feito).
+// substituir: refeições ainda não feitas são trocadas pelo plano;
+// sem isso, só as refeições vazias recebem o plano.
+export async function aplicarPlano(config, tipo, dia, { substituir = false, so = null } = {}) {
+  const plano = planoDe(config, tipo);
+  const itens = await itensDoDia(dia);
+  let ordem = Date.now(), refeicoes = 0;
+  // Substituir: refeições que não são deste tipo (ex.: Pós-treino num dia off) perdem
+  // o que ainda estava só planejado
+  if (substituir && !so) {
+    for (const r of config.refeicoes.filter(x => x.so && x.so !== tipo)) {
+      const atuais = itens.filter(i => i.refeicao === r.id);
+      if (atuais.length && !atuais.some(i => itemFeito(i))) for (const i of atuais) await DB.excluir(T.diario, i.id);
+    }
+  }
+  for (const r of refeicoesDoTipo(config, tipo)) {
+    if (so && r.id !== so) continue;
+    const doPlano = plano[r.id];
+    if (!doPlano?.length) continue;
+    const atuais = itens.filter(i => i.refeicao === r.id);
+    if (atuais.length) {
+      if (!substituir || atuais.some(i => itemFeito(i))) continue;
+      for (const i of atuais) await DB.excluir(T.diario, i.id);
+    }
+    for (const i of doPlano) await DB.salvar(T.diario, { ...novoItem(i.alimento, i.gramas, { dia, refeicao: r.id, porcao: i.porcao }), feito: false, ordem: ordem++ });
+    refeicoes++;
+  }
+  return refeicoes;
+}
+
 // ---------- Diário ----------
 export const hojeISO = () => dataInput();
 export function somarDias(dia, n) {
