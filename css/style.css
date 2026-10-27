@@ -1372,3 +1372,8 @@ body.com-modal #app, body.com-tela-salvar #app { overflow: hidden; }
   .topbar-actions .icon-btn svg { width: 19px; height: 19px; }
   .topbar-back svg { width: 24px; height: 24px; }
 }
+/* Barra de cima nítida: no iPhone, o desfoque de fundo numa barra fixa dentro da área
+   que rola deixava o texto embaçado. Fundo sólido, sem desfoque. */
+@media (max-width: 899px) {
+  .topbar { background: var(--fundo, #000); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
