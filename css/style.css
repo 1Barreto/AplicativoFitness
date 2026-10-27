@@ -1400,3 +1400,8 @@ body.modo-sessao #app { padding-top: 0; }
   .topbar { background: var(--fundo, #000); }
   .dieta-lateral { top: calc(var(--topo) + var(--seg-topo) + 16px); }
 }
+
+/* Barra do treino ativo fixa fora da área que rola (celular) */
+.sessao-topo.sessao-topo-fixa { position: fixed; top: 0; left: 0; right: 0; margin: 0; z-index: 20; padding: calc(10px + var(--seg-topo)) 16px 10px; }
+body.modo-sessao #app { padding-top: var(--sessao-topo, 0px); }
+body.com-tela-salvar .sessao-topo-fixa { display: none; }

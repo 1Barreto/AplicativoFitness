@@ -564,11 +564,24 @@ async function telaAtiva(el) {
     if (seg) { iniciarDescanso(seg, 'Cronômetro'); painel.desenhar(); }
   };
 
+  // Celular: a barra do topo sai da área que rola e fica fixa (dentro dela, o iPhone
+  // desenhava o texto borrado). O #app ganha um espaço em cima da altura dela.
+  const topo = el.querySelector('.sessao-topo');
+  const ajustarTopo = () => {
+    const fixa = matchMedia('(max-width: 899px)').matches;
+    if (fixa && topo.parentNode !== document.body) document.body.appendChild(topo);
+    if (!fixa && topo.parentNode === document.body) el.prepend(topo);
+    topo.classList.toggle('sessao-topo-fixa', fixa);
+    document.documentElement.style.setProperty('--sessao-topo', fixa ? `${topo.offsetHeight}px` : '0px');
+  };
+  ajustarTopo();
+  addEventListener('resize', ajustarTopo);
+
   const painel = montarPainelDescanso(el);
   const relogio = setInterval(() => {
     const d = el.querySelector('[data-duracao]');
     if (d) d.textContent = fmtDuracao(Date.now() - new Date(estado.inicio), true);
-    const c = el.querySelector('[data-cronometro]');
+    const c = topo.querySelector('[data-cronometro]');
     const desc = obterDescanso();
     const resta = desc ? Math.ceil((desc.fim - Date.now()) / 1000) : 0;
     if (c) c.textContent = resta > 0 ? fmtSeg(resta) : '';
@@ -584,6 +597,9 @@ async function telaAtiva(el) {
 
   return () => {
     clearInterval(relogio);
+    removeEventListener('resize', ajustarTopo);
+    topo.remove();
+    document.documentElement.style.removeProperty('--sessao-topo');
     document.body.classList.remove('modo-sessao');
     painel.sair();
     liberarTela();
