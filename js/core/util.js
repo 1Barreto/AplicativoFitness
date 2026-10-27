@@ -129,3 +129,9 @@ export function carregarScript(src) {
 }
 
 export const clone = o => JSON.parse(JSON.stringify(o));
+
+// Rolagem da tela: quem rola é o #app (não a página), para o iPhone entregar o toque
+// no menu de baixo mesmo com a tela ainda deslizando.
+export const rolador = () => document.getElementById('app');
+export const rolagemY = () => rolador()?.scrollTop || 0;
+export const rolarPara = y => rolador()?.scrollTo(0, y);

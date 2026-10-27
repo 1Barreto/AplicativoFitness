@@ -4,7 +4,7 @@ import { DB } from './core/db.js';
 import { Auth } from './core/auth.js';
 import { Sync } from './core/sync.js';
 import { Modulos } from './core/modulos.js';
-import { Bus, debounce, dataInput } from './core/util.js';
+import { Bus, debounce, dataInput, rolador, rolagemY, rolarPara } from './core/util.js';
 import { Icone, definirTitulo, toast } from './core/ui.js';
 import { som } from './core/som.js';
 import './modules/index.js';
@@ -25,7 +25,7 @@ async function renderizar({ preservarRolagem = false } = {}) {
   const meu = ++contadorRender;
   const rota = Modulos.resolver(caminho);
   if (!rota) { location.replace('#/hoje'); return; }
-  const rolagem = preservarRolagem ? window.scrollY : 0;
+  const rolagem = preservarRolagem ? rolagemY() : 0;
   if (typeof limpezaAtual === 'function') { try { limpezaAtual(); } catch (e) { console.error(e); } }
   limpezaAtual = null;
   rotaAtual = rota;
@@ -51,7 +51,7 @@ async function renderizar({ preservarRolagem = false } = {}) {
   if (meu !== contadorRender) { if (typeof limpezaAtual === 'function') limpezaAtual(); return; }
   // Evita "piscar": troca o conteúdo de uma vez
   conteudo.replaceChildren(el);
-  window.scrollTo(0, rolagem);
+  rolarPara(rolagem);
   Bus.emit('rota:mudou', caminho);
 }
 
@@ -63,7 +63,7 @@ function montarAbas() {
   // há pouco, a aba troca no instante em que o dedo encosta; parada, troca ao soltar.
   const tabbar = document.getElementById('tabbar');
   let toqueAba = null, rolouEm = 0;
-  addEventListener('scroll', () => { rolouEm = performance.now(); }, { passive: true });
+  rolador().addEventListener('scroll', () => { rolouEm = performance.now(); }, { passive: true });
   const irPara = a => { const destino = a.getAttribute('href'); if (location.hash !== destino) location.hash = destino; };
   tabbar.addEventListener('touchstart', ev => {
     const t = ev.touches[0], a = ev.target.closest('a');
@@ -134,9 +134,9 @@ async function iniciar() {
   // só quando você rola para cima de propósito. O "quique" do fim da página (o Safari
   // devolve a tela um pouco sozinho) não conta: a subida só vale se o último gesto do
   // dedo foi para cima, e posições além do fim da página são ignoradas.
-  const maxY = () => document.documentElement.scrollHeight - innerHeight;
+  const maxY = () => rolador().scrollHeight - rolador().clientHeight;
   const limitar = y => Math.min(Math.max(y, 0), Math.max(maxY(), 0));
-  let ultimoY = limitar(window.scrollY), acumulado = 0, dedoY = null, gestoSobe = true;
+  let ultimoY = limitar(rolagemY()), acumulado = 0, dedoY = null, gestoSobe = true;
   addEventListener('touchstart', ev => { dedoY = ev.touches[0].clientY; }, { passive: true });
   addEventListener('touchmove', ev => {
     const yDedo = ev.touches[0].clientY;
@@ -144,8 +144,8 @@ async function iniciar() {
     dedoY = yDedo;
   }, { passive: true });
   addEventListener('wheel', ev => { gestoSobe = ev.deltaY < 0; }, { passive: true });
-  addEventListener('scroll', () => {
-    const y = limitar(window.scrollY), d = y - ultimoY;
+  rolador().addEventListener('scroll', () => {
+    const y = limitar(rolagemY()), d = y - ultimoY;
     ultimoY = y;
     if (!d) return;
     acumulado = Math.sign(d) === Math.sign(acumulado) ? acumulado + d : d;

@@ -6,7 +6,7 @@
 // mesmo depois de o iPhone suspender a página.
 
 import { Modulos } from '../../core/modulos.js';
-import { Bus, uuid, esc, num, fmtNum, fmtDuracao, fmtSeg, fmtVolume, agoraISO, clone, dataHoraInput } from '../../core/util.js';
+import { Bus, uuid, esc, num, fmtNum, fmtDuracao, fmtSeg, fmtVolume, agoraISO, clone, dataHoraInput, rolagemY, rolarPara } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu } from '../../core/ui.js';
 import { som } from '../../core/som.js';
 import {
@@ -189,7 +189,7 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
   }
 
   function desenhar() {
-    const rolagem = window.scrollY;
+    const rolagem = rolagemY();
     el.innerHTML = `
       ${modo === 'ativo' ? `
         <div class="sessao-resumo" data-resumo></div>` : `
@@ -209,7 +209,7 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
       </div>`}
     `;
     atualizarResumo();
-    window.scrollTo(0, rolagem);
+    rolarPara(rolagem);
   }
 
   function atualizarResumo() {
@@ -496,7 +496,7 @@ async function telaSalvar(estado, final, rotina) {
       </div>`;
     document.body.appendChild(tela);
     document.body.classList.add('com-tela-salvar');
-    window.scrollTo(0, 0);
+    rolarPara(0);
     const fechar = v => { tela.remove(); document.body.classList.remove('com-tela-salvar'); resolve(v); };
     const nome = tela.querySelector('[data-nome]'), notas = tela.querySelector('[data-notas]'), inicio = tela.querySelector('[data-inicio]');
     // Guarda nome e notas no treino em andamento (se voltar, não perde)
