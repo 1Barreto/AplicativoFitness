@@ -1377,3 +1377,20 @@ body.com-modal #app, body.com-tela-salvar #app { overflow: hidden; }
 @media (max-width: 899px) {
   .topbar { background: var(--fundo, #000); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* Barra de cima fora da área que rola (fixa): dentro dela, o iPhone desenhava o texto
+   embaçado. O #app ganha um espaço em cima do tamanho da barra. */
+.topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 20; }
+#app { padding-top: calc(var(--topo) + var(--seg-topo)); }
+body.modo-sessao #app { padding-top: 0; }
+@media (max-width: 899px) {
+  .sessao-topo { background: var(--fundo, #000); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  /* Encolhe junto com o menu de baixo */
+  .topbar { transition: height .28s cubic-bezier(.2, .8, .2, 1); overflow: hidden; }
+  .topbar-title, .topbar-actions .icon-btn, .topbar-actions .icon-btn svg, .topbar-back svg { transition: font-size .28s, width .28s, height .28s; }
+  body.menu-compacto .topbar { height: calc(34px + var(--seg-topo)); }
+  body.menu-compacto .topbar-title { font-size: 15px; }
+  body.menu-compacto .topbar-actions .icon-btn { width: 28px; height: 28px; }
+  body.menu-compacto .topbar-actions .icon-btn svg { width: 16px; height: 16px; }
+  body.menu-compacto .topbar-back svg { width: 20px; height: 20px; }
+}

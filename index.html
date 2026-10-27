@@ -26,15 +26,15 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <header class="topbar">
+    <button class="topbar-back" id="btn-voltar" aria-label="Voltar" hidden></button>
+    <h1 class="topbar-title" id="titulo">Hoje</h1>
+    <div class="topbar-actions">
+      <button class="sync-pill" id="sync-pill" aria-label="Status da sincronização"></button>
+      <a class="icon-btn" id="btn-ajustes" href="#/ajustes" aria-label="Ajustes"></a>
+    </div>
+  </header>
   <div id="app">
-    <header class="topbar">
-      <button class="topbar-back" id="btn-voltar" aria-label="Voltar" hidden></button>
-      <h1 class="topbar-title" id="titulo">Hoje</h1>
-      <div class="topbar-actions">
-        <button class="sync-pill" id="sync-pill" aria-label="Status da sincronização"></button>
-        <a class="icon-btn" id="btn-ajustes" href="#/ajustes" aria-label="Ajustes"></a>
-      </div>
-    </header>
 
     <main class="content" id="conteudo" tabindex="-1"></main>
 
