@@ -138,6 +138,13 @@ async function iniciar() {
   const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   const ajustarAltura = () => {
     if (!standalone) return;
+    // Só quando o app desenha atrás da barra de status (área segura no topo > 0)
+    const sonda = document.createElement('div');
+    sonda.style.cssText = 'position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top)';
+    document.body.appendChild(sonda);
+    const topo = parseFloat(getComputedStyle(sonda).paddingTop) || 0;
+    sonda.remove();
+    if (topo === 0) { document.documentElement.style.removeProperty('--altura-app'); return; }
     const deitado = innerWidth > innerHeight;
     const real = deitado ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
     document.documentElement.style.setProperty('--altura-app', `${Math.max(real, innerHeight)}px`);
