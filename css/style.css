@@ -1212,11 +1212,8 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 .cartao-proxima .proxima-ultima li { display: contents; }
 .cartao-proxima .proxima-ultima li.sutil { display: block; grid-column: 1 / -1; }
 /* Escolha de RIR: 0 e 0,5 com legenda, ocupando a linha de cima */
-.grade-rir { grid-template-columns: repeat(10, 1fr); }
-.grade-rir .chip { grid-column: span 2; flex-direction: column; gap: 2px; }
-.grade-rir .chip.rir-largo { grid-column: span 5; }
-.grade-rir .chip small { font-size: 11px; color: var(--texto-2); font-weight: 500; }
-.grade-rir .chip.ativo small { color: inherit; }
+.grade-rir { grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.grade-rir .chip { padding-left: 0; padding-right: 0; justify-content: center; }
 
 /* ---------- Recorde na série ---------- */
 :root { --trofeu: #f5c451; --trofeu-rgb: 245, 196, 81; }
