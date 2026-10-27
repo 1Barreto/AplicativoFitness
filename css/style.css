@@ -1394,3 +1394,9 @@ body.modo-sessao #app { padding-top: 0; }
   body.menu-compacto .topbar-actions .icon-btn svg { width: 16px; height: 16px; }
   body.menu-compacto .topbar-back svg { width: 20px; height: 20px; }
 }
+/* PC: barra de cima fixa com fundo sólido (o conteúdo passava por trás do título);
+   elementos "grudados" ficam abaixo dela */
+@media (min-width: 900px) {
+  .topbar { background: var(--fundo, #000); }
+  .dieta-lateral { top: calc(var(--topo) + var(--seg-topo) + 16px); }
+}
