@@ -1328,7 +1328,7 @@ body.com-tela-salvar .tabbar, body.com-tela-salvar .barra-treino, body.com-tela-
 
 /* Quem rola é o #app, não a página (o iPhone entrega o toque no menu mesmo
    com a tela deslizando). */
-html, body { height: var(--altura-app, 100%); overflow: hidden; }
+html, body { height: var(--altura-app, 100%); }
 body { min-height: 0; }
 #app { position: fixed; top: 0; left: 0; right: 0; height: var(--altura-app, 100%); overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: none; -webkit-overflow-scrolling: touch; }
 body.com-modal #app, body.com-tela-salvar #app { overflow: hidden; }
