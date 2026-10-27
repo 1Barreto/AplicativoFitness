@@ -130,6 +130,20 @@ async function iniciar() {
     if (rotaAtual && rotaAtual.recarregar !== false) renderizar({ preservarRolagem: true });
   });
 
+  // iPhone com o app na tela inicial: às vezes a área "visível" informada pelo Safari é
+  // mais curta que a tela (falha conhecida do modo standalone), e a parte de baixo fica
+  // cortada. Estende a área que rola até a altura real da tela.
+  const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  const ajustarAltura = () => {
+    if (!standalone) return;
+    const deitado = innerWidth > innerHeight;
+    const real = deitado ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+    document.documentElement.style.setProperty('--altura-app', `${Math.max(real, innerHeight)}px`);
+  };
+  ajustarAltura();
+  addEventListener('resize', ajustarAltura);
+  addEventListener('orientationchange', () => setTimeout(ajustarAltura, 300));
+
   // Menu de baixo dinâmico (celular): encolhe ao rolar para baixo, volta ao tamanho normal
   // só quando você rola para cima de propósito. O "quique" do fim da página (o Safari
   // devolve a tela um pouco sozinho) não conta: a subida só vale se o último gesto do
