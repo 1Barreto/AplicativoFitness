@@ -58,6 +58,24 @@ async function renderizar({ preservarRolagem = false } = {}) {
 function montarAbas() {
   document.getElementById('tabbar').innerHTML = Modulos.abas().map(a =>
     `<a href="#${a.rota}" data-rota="${a.rota}" data-inclui="${(a.inclui || []).join(',')}">${a.icone}<span>${a.nome}</span></a>`).join('');
+  // Troca de aba já no toque: no iPhone, com a tela ainda deslizando, o primeiro toque
+  // só pararia a rolagem e o "click" não chegaria. Navega no touchend e cancela o click.
+  const tabbar = document.getElementById('tabbar');
+  let toqueAba = null;
+  tabbar.addEventListener('touchstart', ev => {
+    const t = ev.touches[0];
+    toqueAba = ev.touches.length === 1 ? { a: ev.target.closest('a'), x: t.clientX, y: t.clientY } : null;
+  }, { passive: true });
+  tabbar.addEventListener('touchend', ev => {
+    const t = ev.changedTouches[0], ini = toqueAba;
+    toqueAba = null;
+    if (!ini?.a || Math.hypot(t.clientX - ini.x, t.clientY - ini.y) > 12) return;
+    const a = document.elementFromPoint(t.clientX, t.clientY)?.closest('.tabbar a');
+    if (a !== ini.a) return;
+    ev.preventDefault();
+    const destino = a.getAttribute('href');
+    if (location.hash !== destino) location.hash = destino;
+  }, { passive: false });
   document.getElementById('btn-ajustes').innerHTML = Icone.ajustes;
   document.getElementById('btn-voltar').innerHTML = Icone.voltar;
 }
