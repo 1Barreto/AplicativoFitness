@@ -6,7 +6,7 @@ import { esc, fmtNum, clone, normalizar } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio, folha } from '../../core/ui.js';
 import { pesoAtual } from '../corpo/dados.js';
 import {
-  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, excluirItem, novoItem,
+  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, comMetas, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, excluirItem, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
   copiaAlimento, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS, refeicoesDoTipo, planoDe, comPlano, aplicarPlano,
 } from './dados.js';
@@ -108,8 +108,8 @@ async function telaDieta(el, _p, query) {
   const seg = somarDias(dia, -((d0.getDay() + 6) % 7));
   const semana = Array.from({ length: 7 }, (_, i) => somarDias(seg, i));
   const [totaisSemana, tipos] = await Promise.all([totaisPorDia(semana), tiposDosDias(semana)]);
-  const todasMetas = metasDe(config);
-  const metasDia = d => todasMetas[tipos[d].tipo] || {};
+  const todasMetas = metasDe(config, dia);
+  const metasDia = d => metasDe(config, d)[tipos[d].tipo] || {};
   const tipoDia = tipos[dia];
   const metas = metasDia(dia);
 
@@ -205,8 +205,9 @@ async function telaDieta(el, _p, query) {
   });
   el.querySelectorAll('[data-acao=metas]').forEach(b => b.onclick = async () => {
     const peso = (await pesoAtual())?.valor;
-    const novas = await formularioMetas(todasMetas, peso, tipoDia.tipo);
-    if (novas) { await salvarConfig({ ...config, metas: novas }); toast('Metas salvas', 'sucesso'); recarregar(); }
+    const desde = dataDe(dia).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const novas = await formularioMetas(todasMetas, peso, tipoDia.tipo, `Vale a partir de ${dia === hojeISO() ? 'hoje' : desde}. Os dias anteriores mantêm as metas que tinham.`);
+    if (novas) { await salvarConfig(comMetas(config, novas, dia)); toast(`Metas salvas a partir de ${desde}`, 'sucesso'); recarregar(); }
   });
   el.querySelectorAll('[data-acao=plano]').forEach(b => b.onclick = async () => {
     const tipo = tipoDia.tipo;

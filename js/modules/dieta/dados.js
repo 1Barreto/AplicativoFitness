@@ -81,10 +81,22 @@ export async function ultimaVezDaRefeicao(refeicaoId, antesDe) {
 export const TIPOS_DIA = { treino: 'Dia de treino', off: 'Dia off' };
 
 // Metas por tipo de dia. Versões antigas tinham uma meta só ({kcal, p, c, g}).
-export function metasDe(config) {
-  const m = config.metas || {};
-  if (!m.treino && !m.off) return { treino: { ...m }, off: { ...m } };
-  return { treino: m.treino || {}, off: m.off || {} };
+// As metas mudam com o tempo: config.metasHist = [{ desde: 'aaaa-mm-dd', metas }],
+// em ordem de data. Cada dia usa a última mudança até ele; antes da primeira,
+// vale config.metas. Assim, mudar a meta não altera os dias anteriores.
+const separarMetas = m => (!m.treino && !m.off ? { treino: { ...m }, off: { ...m } } : { treino: m.treino || {}, off: m.off || {} });
+export function metasDe(config, dia = hojeISO()) {
+  let m = config.metas || {};
+  for (const h of config.metasHist || []) if (h.desde <= dia) m = h.metas;
+  return separarMetas(m);
+}
+const temMeta = m => Object.values(separarMetas(m || {})).some(t => Object.values(t).some(v => v));
+// Novas metas valendo a partir de "desde" (mudanças marcadas para depois dele são trocadas)
+export function comMetas(config, metas, desde) {
+  // Primeira meta definida: vale para todos os dias, inclusive os anteriores
+  if (!temMeta(config.metas) && !(config.metasHist || []).length) return { ...config, metas };
+  const hist = (config.metasHist || []).filter(h => h.desde < desde);
+  return { ...config, metasHist: [...hist, { desde, metas }] };
 }
 
 // Tipo de cada dia, pela regra do ciclo: 1 dia off seguido de 2 dias de treino.

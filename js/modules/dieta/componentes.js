@@ -347,7 +347,7 @@ export function formularioAlimento(a = null, { base = null } = {}) {
 }
 
 // Metas diárias por tipo de dia ({ treino, off }). Retorna as metas ou undefined.
-export function formularioMetas(metas = {}, peso = null, tipoInicial = 'treino') {
+export function formularioMetas(metas = {}, peso = null, tipoInicial = 'treino', aviso = '') {
   const estado = { treino: { ...(metas.treino || {}) }, off: { ...(metas.off || {}) } };
   let tipo = tipoInicial;
   const CAMPOS = ['kcal', 'p', 'c', 'g'];
@@ -366,6 +366,7 @@ export function formularioMetas(metas = {}, peso = null, tipoInicial = 'treino')
           </div>
           <button type="button" class="link-btn" data-copiar></button>
           <div class="metas-info" data-info></div>
+          ${aviso ? `<p class="metas-desde">${esc(aviso)}</p>` : ''}
           <p class="sutil pequeno">No diário, marque cada dia como treino ou off. Sem marcação, o dia conta como treino quando há um treino registrado nele.</p>
         </div>`;
       const info = corpo.querySelector('[data-info]');
