@@ -1430,3 +1430,7 @@ body.com-tela-salvar .sessao-topo-fixa { display: none; }
 .dia-bloqueado span.check-ref { cursor: default; }
 .segmento.travado button:not(.ativo) { opacity: .45; }
 .segmento.travado button { cursor: default; }
+
+/* Desempenho: o navegador só desenha os itens de listas longas quando chegam perto da tela */
+.item-hist { content-visibility: auto; contain-intrinsic-size: auto 170px; }
+.lista-exercicios .item-exercicio { content-visibility: auto; contain-intrinsic-size: auto 64px; }

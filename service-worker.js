@@ -1,14 +1,15 @@
 // Service worker: deixa o app funcionando offline depois do primeiro acesso.
 //
-// - Arquivos do app: servidos do cache na hora e atualizados em segundo plano
-//   (a versão nova aparece na próxima vez que o app abrir).
+// - Arquivos do app: servidos do cache na hora. Cada versão nova (VERSAO) baixa
+//   tudo de novo na instalação; só a página (index.html) é conferida em segundo
+//   plano a cada abertura, para não disputar a rede com dezenas de pedidos.
 // - Bibliotecas do CDN (Supabase, Chart.js): cache permanente (versões fixas).
 // - Chamadas à API do Supabase: sempre pela rede (nunca em cache).
 //
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v78';
+const VERSAO = 'v79';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
 const CACHE_FOTOS = 'fotos-v1'; // fotos dos exercícios (não mudam)
@@ -106,17 +107,20 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin !== self.location.origin) return;
 
-  // Arquivos do app: cache imediato + atualização em segundo plano
+  // Arquivos do app: cache imediato. A página é atualizada em segundo plano;
+  // os demais arquivos só mudam com uma VERSAO nova (o navegador confere o
+  // service-worker.js sozinho ao abrir o app).
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_APP);
-    const chave = req.mode === 'navigate' ? './index.html' : req;
-    const emCache = await cache.match(chave, { ignoreSearch: req.mode === 'navigate' });
+    const navegacao = req.mode === 'navigate';
+    const chave = navegacao ? './index.html' : req;
+    const emCache = await cache.match(chave, { ignoreSearch: navegacao });
     // no-cache: revalida com o servidor em vez de reaproveitar o cache HTTP do navegador
-    const daRede = (req.mode === 'navigate' ? fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(req, { cache: 'no-cache' })).then(resp => {
-      if (resp.ok && resp.type === 'basic') cache.put(req.mode === 'navigate' ? './index.html' : req, resp.clone());
+    const daRede = () => (navegacao ? fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(req, { cache: 'no-cache' })).then(resp => {
+      if (resp.ok && resp.type === 'basic') cache.put(chave, resp.clone());
       return resp;
     }).catch(() => null);
-    if (emCache) { event.waitUntil(daRede); return emCache; }
-    return (await daRede) || new Response('Offline', { status: 503, statusText: 'Offline' });
+    if (emCache) { if (navegacao) event.waitUntil(daRede()); return emCache; }
+    return (await daRede()) || new Response('Offline', { status: 503, statusText: 'Offline' });
   })());
 });

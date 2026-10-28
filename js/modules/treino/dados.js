@@ -2,7 +2,7 @@
 // recordes e histórico. As telas usam só estas funções.
 
 import { DB } from '../../core/db.js';
-import { e1rm, normalizar } from '../../core/util.js';
+import { e1rm, normalizar, Bus } from '../../core/util.js';
 import { EXERCICIOS_BASE } from './exercicios-base.js';
 
 export const T = { EXERCICIOS: 'exercicios', ROTINAS: 'rotinas', TREINOS: 'treinos' };
@@ -88,9 +88,15 @@ export const salvarRotina = r => DB.salvar(T.ROTINAS, r);
 export const excluirRotina = id => DB.excluir(T.ROTINAS, id);
 
 // ---------- Treinos (sessões concluídas) ----------
+// Lista ordenada e recordes ficam guardados até os treinos mudarem
+// (recalcular a cada tela pesava com centenas de treinos).
+let cacheTreinos = null, cacheRecordes = null;
+Bus.on('dados:alterados', ({ tabela }) => { if (tabela === T.TREINOS || tabela === '*') { cacheTreinos = null; cacheRecordes = null; } });
+
 export async function listarTreinos() {
-  const t = await DB.todos(T.TREINOS);
-  return t.filter(x => x.fim).sort((a, b) => (b.inicio || '').localeCompare(a.inicio || ''));
+  cacheTreinos ||= DB.todos(T.TREINOS).then(t => t.filter(x => x.fim).sort((a, b) => (b.inicio || '').localeCompare(a.inicio || '')))
+    .catch(e => { cacheTreinos = null; throw e; });
+  return (await cacheTreinos).slice();
 }
 export const obterTreino = id => DB.obter(T.TREINOS, id);
 export const salvarTreino = t => DB.salvar(T.TREINOS, t);
@@ -177,7 +183,11 @@ export const NOMES_RECORDE = { carga: 'Maior carga', e1rm: 'Melhor 1RM est.', vo
 // série de cada tipo de recorde quando ela supera tudo o que veio antes.
 // A primeira vez que um exercício é feito não conta como recorde.
 // Retorna Map(serieUid -> ['carga' | 'e1rm' | 'volume']).
-export async function mapaDeRecordes() {
+export function mapaDeRecordes() {
+  cacheRecordes ||= calcularRecordes().catch(e => { cacheRecordes = null; throw e; });
+  return cacheRecordes;
+}
+async function calcularRecordes() {
   const treinos = (await listarTreinos()).slice().reverse();
   const melhores = new Map();
   const resultado = new Map();

@@ -1,7 +1,7 @@
 // Aba "Histórico": lista de treinos, detalhe, edição e exclusão.
 
 import { Modulos } from '../../core/modulos.js';
-import { esc, fmtNum, fmtDataHora, fmtDuracao, fmtVolume, clone, uuid } from '../../core/util.js';
+import { esc, fmtNum, fmtDataHora, fmtDuracao, fmtVolume, clone, uuid, rolador, rolagemY } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, vazio } from '../../core/ui.js';
 import {
   listarTreinos, obterTreino, salvarTreino, excluirTreino, mapaDeExercicios, resumoTreino, mapaDeRecordes,
@@ -17,19 +17,12 @@ async function telaLista(el) {
     el.innerHTML = vazio(Icone.historico, 'Nenhum treino ainda', 'Os treinos finalizados aparecem aqui.', '<a class="btn btn-primario" href="#/treino">Ir para Treino</a>');
     return;
   }
-  const porMes = new Map();
-  treinos.forEach(t => {
-    const chave = new Date(t.inicio).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-    if (!porMes.has(chave)) porMes.set(chave, []);
-    porMes.get(chave).push(t);
-  });
-  el.innerHTML = [...porMes.entries()].map(([mes, lista]) => `
-    <h2 class="secao">${mes} <small>${lista.length} treino${lista.length > 1 ? 's' : ''}</small></h2>
-    <div class="grade-cartoes">
-      ${lista.map(t => {
-        const r = resumoTreino(t, mapa);
-        const prs = t.exercicios.reduce((n, e) => n + e.series.filter(s => recordes.has(s.uid)).length, 0);
-        return `
+  // Renderiza aos poucos: os primeiros cartões aparecem na hora e o resto
+  // entra conforme a rolagem se aproxima do fim (listas longas pesam no iPhone).
+  const cartao = t => {
+    const r = resumoTreino(t, mapa);
+    const prs = t.exercicios.reduce((n, e) => n + e.series.filter(s => recordes.has(s.uid)).length, 0);
+    return `
         <a class="cartao item-hist" href="#/historico/${t.id}">
           <div class="item-hist-topo"><strong>${esc(t.nome)}</strong>${prs ? `<span class="selo">${Icone.trofeu}${prs}</span>` : ''}</div>
           <small class="sutil">${fmtDataHora(t.inicio)}</small>
@@ -40,8 +33,58 @@ async function telaLista(el) {
           </div>
           <ul class="lista-ex-resumo">${t.exercicios.slice(0, 4).map(e => `<li>${e.series.length} × ${esc(mapa.get(e.exercicio_id)?.nome || '?')}</li>`).join('')}${t.exercicios.length > 4 ? `<li class="sutil">+${t.exercicios.length - 4} exercício(s)</li>` : ''}</ul>
         </a>`;
-      }).join('')}
-    </div>`).join('');
+  };
+  const fmtMes = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
+  const meses = [];
+  treinos.forEach(t => {
+    const chave = fmtMes.format(new Date(t.inicio));
+    if (meses.at(-1)?.chave !== chave) meses.push({ chave, lista: [] });
+    meses.at(-1).lista.push(t);
+  });
+  const LOTE = 24;
+  let mi = 0, ti = 0, grade = null;
+  el.innerHTML = '<div data-lista></div><div class="hist-sentinela" aria-hidden="true"></div>';
+  const lista = el.querySelector('[data-lista]');
+  const sentinela = el.querySelector('.hist-sentinela');
+  const mais = (qtd = LOTE) => {
+    let n = 0, html = '';
+    while (mi < meses.length && n < qtd) {
+      const m = meses[mi];
+      if (ti === 0) {
+        if (grade) { grade.insertAdjacentHTML('beforeend', html); html = ''; }
+        lista.insertAdjacentHTML('beforeend', `<h2 class="secao">${m.chave} <small>${m.lista.length} treino${m.lista.length > 1 ? 's' : ''}</small></h2><div class="grade-cartoes"></div>`);
+        grade = lista.lastElementChild;
+      }
+      const fatia = m.lista.slice(ti, ti + qtd - n);
+      html += fatia.map(cartao).join('');
+      n += fatia.length; ti += fatia.length;
+      if (ti >= m.lista.length) { mi++; ti = 0; }
+    }
+    if (html) grade.insertAdjacentHTML('beforeend', html);
+    if (mi >= meses.length) { obs?.disconnect(); sentinela.remove(); }
+  };
+  const obs = 'IntersectionObserver' in window
+    ? new IntersectionObserver(es => {
+      if (!es.some(e => e.isIntersecting)) return;
+      mais();
+      // observa de novo: se a sentinela continua visível (tela grande), o callback dispara outra vez
+      if (sentinela.isConnected) { obs.unobserve(sentinela); obs.observe(sentinela); }
+    }, { root: rolador(), rootMargin: '0px 0px 1200px 0px' })
+    : null;
+  // Ao redesenhar com a rolagem preservada (dados novos da sincronização), já
+  // desenha o suficiente para a posição atual continuar existindo.
+  mais(LOTE + Math.ceil(rolagemY() / 150));
+  if (!obs) { while (mi < meses.length) mais(); return; }
+  // A tela só entra na página depois que esta função termina; o observador
+  // precisa da sentinela já na página para funcionar.
+  let parado = false, tentativas = 0;
+  const observar = () => {
+    if (parado || !sentinela.parentNode) return;
+    if (sentinela.isConnected) obs.observe(sentinela);
+    else if (++tentativas < 120) requestAnimationFrame(observar);
+  };
+  requestAnimationFrame(observar);
+  return () => { parado = true; obs.disconnect(); };
 }
 
 async function telaDetalhe(el, { id }, query) {
