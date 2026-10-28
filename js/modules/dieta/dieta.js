@@ -96,6 +96,9 @@ function cartaoSemana(semana, totais, metasDia, dia, tipos) {
 }
 
 // ---------- Diário ----------
+// Dias que já passaram ficam só para consulta (dá para desbloquear um dia por vez)
+const desbloqueados = new Set();
+
 async function telaDieta(el, _p, query) {
   definirTitulo('Dieta');
   const dia = /^\d{4}-\d{2}-\d{2}$/.test(query.dia || '') ? query.dia : hojeISO();
@@ -121,9 +124,11 @@ async function telaDieta(el, _p, query) {
   const planoDia = planoDe(config, tipoDia.tipo);
   const temPlano = refeicoesDoTipo(config, tipoDia.tipo).some(r => planoDia[r.id]?.length);
   const nomePlano = tipoDia.tipo === 'treino' ? 'plano de treino' : 'plano off';
+  const bloqueado = dia < hojeISO() && !desbloqueados.has(dia);
   const ir = d => { location.hash = d === hojeISO() ? '#/dieta' : `#/dieta?dia=${d}`; };
 
   el.classList.add('tela-dieta');
+  el.classList.toggle('dia-bloqueado', bloqueado);
   el.innerHTML = `
     <div class="dieta-dias">
       <div class="dieta-dia-topo">
@@ -143,7 +148,7 @@ async function telaDieta(el, _p, query) {
       <div class="dieta-lateral">
         <section class="cartao dieta-resumo">
           <div class="resumo-topo">
-            <div class="segmento tipo-dia" data-tipo-dia>
+            <div class="segmento tipo-dia ${bloqueado ? 'travado' : ''}" data-tipo-dia>
               ${Object.entries(TIPOS_DIA).map(([k, nome]) => `<button data-t="${k}" class="${tipoDia.tipo === k ? 'ativo' : ''}">${k === 'treino' ? Icone.treino : Icone.hoje}<span>${nome}</span></button>`).join('')}
             </div>
             <button class="icon-btn btn-editar-metas" data-acao="metas" aria-label="Editar metas" title="Editar metas">${Icone.editar}</button>
@@ -155,14 +160,15 @@ async function telaDieta(el, _p, query) {
           <button class="chip" data-acao="metas">${Icone.medidor}<span>Metas</span></button>
           <a class="chip" href="#/dieta/alimentos">${Icone.dieta}<span>Meus alimentos</span></a>
           <a class="chip" href="#/dieta/refeicoes">${Icone.copiar}<span>Refeições</span></a>
-          ${!itens.length && temPlano ? '' : `<button class="chip" data-acao="plano">${Icone.check}<span>Aplicar ${nomePlano}</span></button>`}
-          ${!itens.length ? `<button class="chip" data-acao="copiar-dia">${Icone.historico}<span>Copiar dia anterior</span></button>` : ''}
+          ${bloqueado || (!itens.length && temPlano) ? '' : `<button class="chip" data-acao="plano">${Icone.check}<span>Aplicar ${nomePlano}</span></button>`}
+          ${!itens.length && !bloqueado ? `<button class="chip" data-acao="copiar-dia">${Icone.historico}<span>Copiar dia anterior</span></button>` : ''}
         </nav>
         ${cartaoSemana(semana, totaisSemana, metasDia, dia, tipos)}
       </div>
 
       <div class="dieta-refeicoes">
-        ${!itens.length && temPlano ? `<button class="btn btn-primario btn-bloco btn-aplicar-plano" data-acao="plano">${Icone.check}<span>Aplicar ${nomePlano}</span></button>` : ''}
+        ${bloqueado ? `<div class="aviso-bloqueado">${Icone.historico}<span><strong>Dia encerrado</strong><small>Só para consulta. A dieta de dias passados não é editada.</small></span><button class="btn btn-secundario btn-pequeno" data-acao="desbloquear">Desbloquear</button></div>` : ''}
+        ${!itens.length && temPlano && !bloqueado ? `<button class="btn btn-primario btn-bloco btn-aplicar-plano" data-acao="plano">${Icone.check}<span>Aplicar ${nomePlano}</span></button>` : ''}
         <div class="dieta-colunas" aria-hidden="true"><span>Alimento</span><span>Quantidade</span><span>Proteína</span><span>Carbo</span><span>Gordura</span><span>kcal</span><span></span></div>
         ${refeicoes.map(r => {
           const lista = doGrupo(r);
@@ -173,7 +179,8 @@ async function telaDieta(el, _p, query) {
             <div class="refeicao-topo">
               <div class="refeicao-titulo">
                 <div class="refeicao-nome">
-                  ${lista.length ? `<button class="check-ref ${feita ? 'ativo' : ''}" data-acao="feita" aria-pressed="${feita}" title="${feita ? 'Feita · toque para desmarcar' : 'Marcar como feita'}">${Icone.check}</button>` : ''}
+                  ${lista.length && bloqueado ? `<span class="check-ref ${feita ? 'ativo' : ''}" aria-label="${feita ? 'Feita' : 'Não feita'}">${Icone.check}</span>` : ''}
+                  ${lista.length && !bloqueado ? `<button class="check-ref ${feita ? 'ativo' : ''}" data-acao="feita" aria-pressed="${feita}" title="${feita ? 'Feita · toque para desmarcar' : 'Marcar como feita'}">${Icone.check}</button>` : ''}
                   <h3>${esc(r.nome)}</h3>
                   ${lista.length ? `<span class="estado-ref">${feita ? 'Feita' : 'Planejada'}</span>` : ''}
                 </div>
@@ -181,7 +188,7 @@ async function telaDieta(el, _p, query) {
               </div>
               ${lista.length ? `<span class="col col-qtd">${lista.length} ${lista.length === 1 ? 'item' : 'itens'}</span><span class="col m-p">${fmtG(t.p)} g</span><span class="col m-c">${fmtG(t.c)} g</span><span class="col m-g">${fmtG(t.g)} g</span>` : '<span class="col col-vazia">Nada registrado</span>'}
               <span class="refeicao-kcal">${lista.length ? `${fmtKcal(t.kcal)}<small>kcal</small>` : ''}</span>
-              <button class="icon-btn" data-acao="menu-ref" aria-label="Opções da refeição">${Icone.pontos}</button>
+              ${bloqueado ? '' : `<button class="icon-btn" data-acao="menu-ref" aria-label="Opções da refeição">${Icone.pontos}</button>`}
             </div>
             ${lista.length ? `<ul class="refeicao-itens">${lista.map(i => {
               const v = calcular(i.alimento.n, i.gramas);
@@ -190,7 +197,7 @@ async function telaDieta(el, _p, query) {
                 <span class="col col-qtd">${fmtQtd(i)}</span><span class="col">${fmtG(v.p)}</span><span class="col">${fmtG(v.c)}</span><span class="col">${fmtG(v.g)}</span>
                 <b>${fmtKcal(v.kcal)}</b><span class="col col-seta">${Icone.editar}</span></button></li>`;
             }).join('')}</ul>` : ''}
-            ${r.id === '__outros' ? '' : `<button class="btn-add-alimento" data-acao="add">${Icone.mais}<span>Adicionar alimento</span></button>`}
+            ${r.id === '__outros' || bloqueado ? '' : `<button class="btn-add-alimento" data-acao="add">${Icone.mais}<span>Adicionar alimento</span></button>`}
           </article>`;
         }).join('')}
       </div>
@@ -198,7 +205,9 @@ async function telaDieta(el, _p, query) {
 
   const recarregar = () => telaDieta(el, _p, query);
   el.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
+  el.querySelector('[data-acao=desbloquear]')?.addEventListener('click', () => { desbloqueados.add(dia); recarregar(); });
   el.querySelector('[data-tipo-dia]').addEventListener('click', async e => {
+    if (bloqueado) return;
     const b = e.target.closest('[data-t]'); if (!b || (b.dataset.t === tipoDia.tipo && tipoDia.manual)) return;
     await marcarTipoDia(dia, b.dataset.t);
     recarregar();
@@ -257,6 +266,7 @@ async function telaDieta(el, _p, query) {
       const n = await adicionarAlimentos({ dia, refeicao: ref, feito: refeicaoFeita(doGrupo(ref)) });
       if (n) recarregar();
     });
+    if (bloqueado) return;
     card.querySelectorAll('[data-item]').forEach(b => b.onclick = async () => {
       const item = itens.find(i => i.id === b.dataset.item);
       const r = await escolherQuantidade(item.alimento, {
@@ -268,7 +278,7 @@ async function telaDieta(el, _p, query) {
       else await salvarItem({ ...item, gramas: r.gramas, porcao: r.porcao, refeicao: r.refeicao, alimento: r.alimento === item.alimento ? item.alimento : copiaAlimento(r.alimento) });
       recarregar();
     });
-    card.querySelector('[data-acao=menu-ref]').onclick = async () => {
+    card.querySelector('[data-acao=menu-ref]')?.addEventListener('click', async () => {
       const lista = doGrupo(ref);
       const op = await menu(ref.nome, [
         ...(ref.id !== '__outros' && planoDia[ref.id]?.length && !refeicaoFeita(lista) ? [{ texto: `Usar o ${nomePlano}`, valor: 'usar-plano', icone: Icone.check }] : []),
@@ -304,7 +314,7 @@ async function telaDieta(el, _p, query) {
         for (const i of lista) await excluirItem(i.id);
         recarregar();
       }
-    };
+    });
   });
 }
 

@@ -1420,3 +1420,13 @@ body.com-tela-salvar .sessao-topo-fixa { display: none; }
 .plano-total { padding-top: 14px; padding-bottom: 14px; }
 .btn-aplicar-plano { margin-bottom: 12px; }
 .metas-desde { margin: 4px 0 0; padding: 8px 12px; border-radius: 12px; background: rgba(var(--p-rgb), .1); color: var(--texto); font-size: 13px; }
+/* Dieta: dia que já passou (só consulta) */
+.aviso-bloqueado { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 12px; border-radius: 16px; background: var(--cartao); border: 1px solid var(--borda); }
+.aviso-bloqueado > svg { width: 20px; height: 20px; color: var(--texto-2); flex: none; }
+.aviso-bloqueado span { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.aviso-bloqueado small { color: var(--texto-2); font-size: 12px; }
+.dia-bloqueado .refeicao-itens button { cursor: default; }
+.dia-bloqueado .refeicao-itens .col-seta { visibility: hidden; }
+.dia-bloqueado span.check-ref { cursor: default; }
+.segmento.travado button:not(.ativo) { opacity: .45; }
+.segmento.travado button { cursor: default; }
