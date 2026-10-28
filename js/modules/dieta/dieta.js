@@ -6,7 +6,7 @@ import { esc, fmtNum, clone, normalizar } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio, folha } from '../../core/ui.js';
 import { pesoAtual } from '../corpo/dados.js';
 import {
-  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, comMetas, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, excluirItem, novoItem,
+  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, comMetas, proximaMudancaMetas, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, excluirItem, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
   copiaAlimento, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS, refeicoesDoTipo, planoDe, comPlano, aplicarPlano,
 } from './dados.js';
@@ -214,8 +214,10 @@ async function telaDieta(el, _p, query) {
   });
   el.querySelectorAll('[data-acao=metas]').forEach(b => b.onclick = async () => {
     const peso = (await pesoAtual())?.valor;
-    const desde = dataDe(dia).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    const novas = await formularioMetas(todasMetas, peso, tipoDia.tipo, `Vale a partir de ${dia === hojeISO() ? 'hoje' : desde}. Os dias anteriores mantêm as metas que tinham.`);
+    const fmtD = d => dataDe(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const desde = fmtD(dia);
+    const ate = proximaMudancaMetas(config, dia);
+    const novas = await formularioMetas(todasMetas, peso, tipoDia.tipo, `Vale a partir de ${dia === hojeISO() ? 'hoje' : desde}${ate ? ` até ${fmtD(somarDias(ate, -1))} (dia ${fmtD(ate)} já tem outra meta)` : ''}. Os dias anteriores mantêm as metas que tinham.`);
     if (novas) { await salvarConfig(comMetas(config, novas, dia)); toast(`Metas salvas a partir de ${desde}`, 'sucesso'); recarregar(); }
   });
   el.querySelectorAll('[data-acao=plano]').forEach(b => b.onclick = async () => {

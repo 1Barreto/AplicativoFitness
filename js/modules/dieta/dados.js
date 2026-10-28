@@ -91,13 +91,16 @@ export function metasDe(config, dia = hojeISO()) {
   return separarMetas(m);
 }
 const temMeta = m => Object.values(separarMetas(m || {})).some(t => Object.values(t).some(v => v));
-// Novas metas valendo a partir de "desde" (mudanças marcadas para depois dele são trocadas)
+// Novas metas valendo a partir de "desde" até a próxima mudança já marcada
+// (mudar a meta de um dia passado não apaga a meta atual)
 export function comMetas(config, metas, desde) {
   // Primeira meta definida: vale para todos os dias, inclusive os anteriores
   if (!temMeta(config.metas) && !(config.metasHist || []).length) return { ...config, metas };
-  const hist = (config.metasHist || []).filter(h => h.desde < desde);
-  return { ...config, metasHist: [...hist, { desde, metas }] };
+  const hist = (config.metasHist || []).filter(h => h.desde !== desde);
+  return { ...config, metasHist: [...hist, { desde, metas }].sort((a, b) => a.desde.localeCompare(b.desde)) };
 }
+// Data da próxima mudança de meta depois de "dia" (ou null)
+export const proximaMudancaMetas = (config, dia) => (config.metasHist || []).map(h => h.desde).filter(d => d > dia).sort()[0] || null;
 
 // Tipo de cada dia, pela regra do ciclo: 1 dia off seguido de 2 dias de treino.
 // Cada dia marcado manualmente recomeça o ciclo a partir dele (off = início do
