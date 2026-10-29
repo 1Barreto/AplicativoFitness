@@ -392,7 +392,8 @@ label.linha-lista { cursor: pointer; }
 .tabela-detalhe td { padding: 6px 4px; border-top: .5px solid var(--linha); }
 .tabela-detalhe th:nth-child(1), .tabela-detalhe td:nth-child(1) { width: 52px; }
 .tabela-detalhe th:nth-child(2), .tabela-detalhe td:nth-child(2), .tabela-detalhe th:nth-child(3), .tabela-detalhe td:nth-child(3) { width: 64px; }
-.tabela-detalhe td:nth-child(4) { text-align: right; }
+.tabela-detalhe td:last-child { text-align: right; }
+.tabela-detalhe .col-rir { width: 56px; text-align: left; }
 
 /* ---------- Gráficos ---------- */
 .grafico { position: relative; height: 220px; margin-top: 8px; }

@@ -117,11 +117,11 @@ async function telaDetalhe(el, { id }, query) {
         <a class="ex-nome" href="#/treino/exercicio/${e.exercicio_id}">${esc(ex.nome)}</a>
         ${e.notas ? `<p class="sutil">${esc(e.notas)}</p>` : ''}
         <table class="tabela-detalhe">
-          <thead><tr><th>Série</th><th>${c1}</th><th>${c2}</th>${e.series.some(s => s.rir != null) ? '<th>RIR</th>' : ''}<th></th></tr></thead>
+          <thead><tr><th>Série</th><th>${c1}</th><th>${c2}</th>${e.series.some(s => s.rir != null) ? '<th class="col-rir">RIR</th>' : ''}<th></th></tr></thead>
           <tbody>${e.series.map((s, j) => `
             <tr>
               <td><span class="tipo-serie mini ${TIPOS_SERIE[s.tipo]?.classe || ''}">${rot[j]}</span></td>
-              <td>${fmtNum(s.peso) || '–'}</td><td>${fmtNum(s.reps) || '–'}</td>${e.series.some(x => x.rir != null) ? `<td>${s.rir != null ? fmtRir(s.rir) : '–'}</td>` : ''}
+              <td>${fmtNum(s.peso) || '–'}</td><td>${fmtNum(s.reps) || '–'}</td>${e.series.some(x => x.rir != null) ? `<td class="col-rir">${s.rir != null ? fmtRir(s.rir) : '–'}</td>` : ''}
               <td>${recordes.has(s.uid) ? `<span class="selo" title="${recordes.get(s.uid).map(x => NOMES_RECORDE[x]).join(', ')}">${Icone.trofeu}${recordes.get(s.uid).map(x => NOMES_RECORDE[x]).join(' · ')}</span>` : ''}</td>
             </tr>`).join('')}</tbody>
         </table>
