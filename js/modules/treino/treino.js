@@ -6,7 +6,7 @@ import { Icone, definirTitulo, toast, confirmar, menu, vazio } from '../../core/
 import { criarGrafico } from '../../core/graficos.js';
 import {
   T, listarRotinas, obterRotina, salvarRotina, excluirRotina, mapaDeExercicios, obterExercicio, excluirExercicio, salvarExercicio,
-  historicoExercicio, melhoresDeSeries, TIPOS_SERIE, TIPOS_EXERCICIO, descansoDe, listarTreinos, resumoTreino, proximaRotina, ultimasSeries,
+  historicoExercicio, melhoresDeSeries, TIPOS_SERIE, TIPOS_EXERCICIO, descansoDe, listarTreinos, resumoTreino, proximaRotina, ultimasSeries, chaveDeTreino,
 } from './dados.js';
 import { montarListaExercicios, escolherExercicios, formularioExercicio, escolherTipoSerie, rotulosSeries, escolherDescanso } from './componentes.js';
 import { iniciarTreino, obterAtivo } from './sessao.js';
@@ -190,93 +190,110 @@ async function telaExercicios(el) {
 async function telaExercicio(el, { id }) {
   const ex = await obterExercicio(id);
   definirTitulo(ex.nome, { voltar: () => history.length > 1 ? history.back() : (location.hash = '#/treino/exercicios') });
-  const hist = await historicoExercicio(id);
-  const tudo = hist.flatMap(h => h.series);
-  const melhores = melhoresDeSeries(tudo);
-  const tempo = ex.tipo === 'tempo';
-  const [c1, c2] = TIPOS_EXERCICIO[ex.tipo || 'peso_reps'].campos;
+  const [histTodo, chave] = await Promise.all([historicoExercicio(id), chaveDeTreino()]);
+  // Filtro por treino (Posterior I, Posterior II…): a progressão se compara dentro do mesmo treino
+  const grupos = new Map();
+  histTodo.forEach(h => { const k = chave(h.treino); if (!grupos.has(k)) grupos.set(k, { nome: h.treino.nome, n: 0 }); grupos.get(k).n++; });
+  let filtro = '', grafico = null;
+  const desenhar = () => {
+    grafico?.destroy(); grafico = null;
+    const hist = filtro ? histTodo.filter(h => chave(h.treino) === filtro) : histTodo;
+    const tudo = hist.flatMap(h => h.series);
+    const melhores = melhoresDeSeries(tudo);
+    const tempo = ex.tipo === 'tempo';
+    const [c1, c2] = TIPOS_EXERCICIO[ex.tipo || 'peso_reps'].campos;
 
-  el.innerHTML = `
-    ${fotoDe(ex) ? `
-    <div class="foto-exercicio ${fotoDe(ex).desenho ? 'desenho' : ''}">
-      <img src="${esc(fotoDe(ex).grande)}" alt="${esc(ex.nome)}" onerror="this.src='${esc(fotoDe(ex).mini)}'">
-      ${fotoDe(ex).grande2 ? `<img src="${esc(fotoDe(ex).grande2)}" alt="" onerror="this.remove()">` : ''}
-    </div>` : ''}
-    <div class="cartao">
-      <div class="ex-cab">
-        ${avatarExercicio(ex, 'grande')}
-        <div><h2>${esc(ex.nome)}</h2><p class="sutil">${esc(ex.grupo)} · ${esc(ex.equipamento)}${ex.base ? '' : ' · personalizado'}</p></div>
-      </div>
-      <p class="sutil">Descanso: ${descansoDe(ex) ? `${descansoDe(ex)} s` : 'desligado'}${ex.notas ? ` · ${esc(ex.notas)}` : ''}</p>
-      <div class="linha-botoes">
-        <button class="btn btn-secundario" data-acao="editar">${Icone.editar}<span>Editar</span></button>
-        ${!ex.removido ? `<button class="btn btn-secundario" data-acao="foto">${Icone.camera}<span>${fotoDe(ex) ? 'Trocar foto' : 'Adicionar foto'}</span></button>` : ''}
-        ${!ex.base && !ex.removido ? `<button class="btn btn-secundario perigo" data-acao="excluir">${Icone.lixo}<span>Excluir</span></button>` : ''}
-      </div>
-    </div>
-    ${tempo ? '' : `
-    <h2 class="secao">Recordes pessoais</h2>
-    <div class="grade-stats">
-      <div class="stat">${Icone.trofeu}<small>Maior carga</small><strong>${fmtKg(melhores.carga || null)}</strong></div>
-      <div class="stat">${Icone.trofeu}<small>1RM estimado</small><strong>${fmtKg(melhores.e1rm ? Math.round(melhores.e1rm * 10) / 10 : null)}</strong></div>
-      <div class="stat">${Icone.trofeu}<small>Maior volume (série)</small><strong>${fmtKg(melhores.volume || null)}</strong></div>
-    </div>`}
-    ${hist.length > 1 ? `
-      <h2 class="secao">Evolução</h2>
-      <div class="cartao">
-        <div class="abas-mini" data-abas>
-          ${tempo ? '<button class="chip ativo" data-g="dist">Distância</button><button class="chip" data-g="tempo">Tempo</button>'
-            : '<button class="chip ativo" data-g="e1rm">1RM est.</button><button class="chip" data-g="carga">Maior carga</button><button class="chip" data-g="volume">Volume</button><button class="chip" data-g="reps">Reps</button>'}
-        </div>
-        <div class="grafico"><canvas></canvas></div>
+    el.innerHTML = `
+      ${fotoDe(ex) ? `
+      <div class="foto-exercicio ${fotoDe(ex).desenho ? 'desenho' : ''}">
+        <img src="${esc(fotoDe(ex).grande)}" alt="${esc(ex.nome)}" onerror="this.src='${esc(fotoDe(ex).mini)}'">
+        ${fotoDe(ex).grande2 ? `<img src="${esc(fotoDe(ex).grande2)}" alt="" onerror="this.remove()">` : ''}
       </div>` : ''}
-    <h2 class="secao">Histórico <small>${hist.length}</small></h2>
-    ${hist.length ? hist.map(h => `
-      <a class="cartao item-hist" href="#/historico/${h.treino.id}">
-        <div class="item-hist-topo"><strong>${esc(h.treino.nome)}</strong><small>${fmtData(h.treino.inicio)}</small></div>
-        <ol class="series-resumo">${h.series.map(s => `<li><span class="tipo-serie mini ${TIPOS_SERIE[s.tipo]?.classe || ''}">${TIPOS_SERIE[s.tipo]?.curto || '•'}</span>${fmtNum(s.peso) || 0} ${c1} × ${fmtNum(s.reps) || 0} ${c2}${!tempo && s.peso && s.reps ? ` <small class="sutil">(1RM ${fmtNum(Math.round(e1rm(s.peso, s.reps)))})</small>` : ''}</li>`).join('')}</ol>
-      </a>`).join('') : vazio(Icone.historico, 'Ainda sem registros', 'Faça este exercício em um treino para ver o histórico.')}
-  `;
+      <div class="cartao">
+        <div class="ex-cab">
+          ${avatarExercicio(ex, 'grande')}
+          <div><h2>${esc(ex.nome)}</h2><p class="sutil">${esc(ex.grupo)} · ${esc(ex.equipamento)}${ex.base ? '' : ' · personalizado'}</p></div>
+        </div>
+        <p class="sutil">Descanso: ${descansoDe(ex) ? `${descansoDe(ex)} s` : 'desligado'}${ex.notas ? ` · ${esc(ex.notas)}` : ''}</p>
+        <div class="linha-botoes">
+          <button class="btn btn-secundario" data-acao="editar">${Icone.editar}<span>Editar</span></button>
+          ${!ex.removido ? `<button class="btn btn-secundario" data-acao="foto">${Icone.camera}<span>${fotoDe(ex) ? 'Trocar foto' : 'Adicionar foto'}</span></button>` : ''}
+          ${!ex.base && !ex.removido ? `<button class="btn btn-secundario perigo" data-acao="excluir">${Icone.lixo}<span>Excluir</span></button>` : ''}
+        </div>
+      </div>
+      ${grupos.size > 1 ? `
+      <div class="chips-rolagem filtro-treino" data-filtro>
+        <button class="chip ${filtro ? '' : 'ativo'}" data-k="">Todos</button>
+        ${[...grupos].map(([k, g]) => `<button class="chip ${filtro === k ? 'ativo' : ''}" data-k="${esc(k)}">${esc(g.nome)} <small>${g.n}</small></button>`).join('')}
+      </div>` : ''}
+      ${tempo ? '' : `
+      <h2 class="secao">Recordes pessoais${filtro ? ` <small>${esc(grupos.get(filtro).nome)}</small>` : ''}</h2>
+      <div class="grade-stats">
+        <div class="stat">${Icone.trofeu}<small>Maior carga</small><strong>${fmtKg(melhores.carga || null)}</strong></div>
+        <div class="stat">${Icone.trofeu}<small>1RM estimado</small><strong>${fmtKg(melhores.e1rm ? Math.round(melhores.e1rm * 10) / 10 : null)}</strong></div>
+        <div class="stat">${Icone.trofeu}<small>Maior volume (série)</small><strong>${fmtKg(melhores.volume || null)}</strong></div>
+      </div>`}
+      ${hist.length > 1 ? `
+        <h2 class="secao">Evolução</h2>
+        <div class="cartao">
+          <div class="abas-mini" data-abas>
+            ${tempo ? '<button class="chip ativo" data-g="dist">Distância</button><button class="chip" data-g="tempo">Tempo</button>'
+              : '<button class="chip ativo" data-g="e1rm">1RM est.</button><button class="chip" data-g="carga">Maior carga</button><button class="chip" data-g="volume">Volume</button><button class="chip" data-g="reps">Reps</button>'}
+          </div>
+          <div class="grafico"><canvas></canvas></div>
+        </div>` : ''}
+      <h2 class="secao">Histórico <small>${hist.length}</small></h2>
+      ${hist.length ? hist.map(h => `
+        <a class="cartao item-hist" href="#/historico/${h.treino.id}">
+          <div class="item-hist-topo"><strong>${esc(h.treino.nome)}</strong><small>${fmtData(h.treino.inicio)}</small></div>
+          <ol class="series-resumo">${h.series.map(s => `<li><span class="tipo-serie mini ${TIPOS_SERIE[s.tipo]?.classe || ''}">${TIPOS_SERIE[s.tipo]?.curto || '•'}</span>${fmtNum(s.peso) || 0} ${c1} × ${fmtNum(s.reps) || 0} ${c2}${!tempo && s.peso && s.reps ? ` <small class="sutil">(1RM ${fmtNum(Math.round(e1rm(s.peso, s.reps)))})</small>` : ''}</li>`).join('')}</ol>
+        </a>`).join('') : vazio(Icone.historico, 'Ainda sem registros', 'Faça este exercício em um treino para ver o histórico.')}
+    `;
 
-  el.querySelector('[data-acao=editar]').onclick = async () => { if (await formularioExercicio(ex)) telaExercicio(el, { id }); };
-  el.querySelector('[data-acao=foto]')?.addEventListener('click', async () => {
-    const foto = await escolherFoto(ex);
-    if (foto === undefined) return;
-    await salvarExercicio({ ...ex, foto });
-    toast('Foto atualizada', 'sucesso');
-    telaExercicio(el, { id });
-  });
-  el.querySelector('[data-acao=excluir]')?.addEventListener('click', async () => {
-    if (await confirmar('Excluir este exercício? Ele continuará aparecendo nos treinos antigos.', { ok: 'Excluir', perigo: true })) {
-      await excluirExercicio(id); toast('Exercício excluído'); location.hash = '#/treino/exercicios';
-    }
-  });
-
-  if (hist.length > 1) {
-    const cron = [...hist].reverse();
-    const rotulos = cron.map(h => new Date(h.treino.inicio).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
-    const series = {
-      e1rm: { nome: '1RM estimado', dados: cron.map(h => Math.round(melhoresDeSeries(h.series).e1rm * 10) / 10), sufixo: ' kg' },
-      carga: { nome: 'Maior carga', dados: cron.map(h => melhoresDeSeries(h.series).carga), sufixo: ' kg' },
-      volume: { nome: 'Volume', dados: cron.map(h => h.series.reduce((t, s) => t + (s.peso || 0) * (s.reps || 0), 0)), sufixo: ' kg' },
-      reps: { nome: 'Total de reps', dados: cron.map(h => h.series.reduce((t, s) => t + (s.reps || 0), 0)) },
-      dist: { nome: 'Distância', dados: cron.map(h => h.series.reduce((t, s) => t + (s.peso || 0), 0)), sufixo: ' km' },
-      tempo: { nome: 'Tempo', dados: cron.map(h => h.series.reduce((t, s) => t + (s.reps || 0), 0)), sufixo: ' min' },
-    };
-    let grafico = null;
-    const mostrar = async (k) => {
-      grafico?.destroy();
-      const s = series[k];
-      grafico = await criarGrafico(el.querySelector('canvas'), { rotulos, series: [{ nome: s.nome, dados: s.dados }], sufixo: s.sufixo || '' });
-    };
-    el.querySelector('[data-abas]').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-g]'); if (!b) return;
-      el.querySelectorAll('[data-g]').forEach(x => x.classList.toggle('ativo', x === b));
-      mostrar(b.dataset.g);
+    el.querySelector('[data-filtro]')?.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-k]'); if (!b) return;
+      filtro = b.dataset.k; desenhar();
     });
-    mostrar(tempo ? 'dist' : 'e1rm');
-    return () => grafico?.destroy();
-  }
+    el.querySelector('[data-acao=editar]').onclick = async () => { if (await formularioExercicio(ex)) telaExercicio(el, { id }); };
+    el.querySelector('[data-acao=foto]')?.addEventListener('click', async () => {
+      const foto = await escolherFoto(ex);
+      if (foto === undefined) return;
+      await salvarExercicio({ ...ex, foto });
+      toast('Foto atualizada', 'sucesso');
+      telaExercicio(el, { id });
+    });
+    el.querySelector('[data-acao=excluir]')?.addEventListener('click', async () => {
+      if (await confirmar('Excluir este exercício? Ele continuará aparecendo nos treinos antigos.', { ok: 'Excluir', perigo: true })) {
+        await excluirExercicio(id); toast('Exercício excluído'); location.hash = '#/treino/exercicios';
+      }
+    });
+
+    if (hist.length > 1) {
+      const cron = [...hist].reverse();
+      const rotulos = cron.map(h => new Date(h.treino.inicio).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+      const series = {
+        e1rm: { nome: '1RM estimado', dados: cron.map(h => Math.round(melhoresDeSeries(h.series).e1rm * 10) / 10), sufixo: ' kg' },
+        carga: { nome: 'Maior carga', dados: cron.map(h => melhoresDeSeries(h.series).carga), sufixo: ' kg' },
+        volume: { nome: 'Volume', dados: cron.map(h => h.series.reduce((t, s) => t + (s.peso || 0) * (s.reps || 0), 0)), sufixo: ' kg' },
+        reps: { nome: 'Total de reps', dados: cron.map(h => h.series.reduce((t, s) => t + (s.reps || 0), 0)) },
+        dist: { nome: 'Distância', dados: cron.map(h => h.series.reduce((t, s) => t + (s.peso || 0), 0)), sufixo: ' km' },
+        tempo: { nome: 'Tempo', dados: cron.map(h => h.series.reduce((t, s) => t + (s.reps || 0), 0)), sufixo: ' min' },
+      };
+      const mostrar = async (k) => {
+        grafico?.destroy();
+        const s = series[k];
+        grafico = await criarGrafico(el.querySelector('canvas'), { rotulos, series: [{ nome: s.nome, dados: s.dados }], sufixo: s.sufixo || '' });
+      };
+      el.querySelector('[data-abas]').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-g]'); if (!b) return;
+        el.querySelectorAll('[data-g]').forEach(x => x.classList.toggle('ativo', x === b));
+        mostrar(b.dataset.g);
+      });
+      mostrar(tempo ? 'dist' : 'e1rm');
+    }
+  };
+  desenhar();
+  return () => grafico?.destroy();
 }
 
 // ---------- Cartões da tela "Hoje" ----------
@@ -308,7 +325,7 @@ async function primeiroExercicio(rotina) {
   if (!item) return '';
   const ex = (await mapaDeExercicios()).get(item.exercicio_id);
   if (!ex) return '';
-  const ultima = await ultimasSeries(item.exercicio_id);
+  const ultima = await ultimasSeries(item.exercicio_id, { treino: { rotina_id: rotina.id, nome: rotina.nome } });
   const validas = (ultima?.series || []).filter(x => x.tipo !== 'A');
   const series = validas.length ? validas : (ultima?.series || []);
   const fmt = x => x.peso != null && x.reps != null ? `${fmtNum(x.peso)} kg × ${x.reps}` : x.reps != null ? `${x.reps} reps` : x.peso != null ? fmtKg(x.peso) : '';

@@ -131,14 +131,14 @@ Bus.on('rota:mudou', atualizarBarra);
  */
 export async function montarEditor(el, estado, { modo, aoMudar }) {
   const mapa = await mapaDeExercicios();
-  const anteriores = new Map();   // exercicio_id -> séries do último treino
+  const anteriores = new Map();   // exercicio_id -> séries da última vez neste mesmo treino
   const historicos = new Map();   // exercicio_id -> recordes antes deste treino
 
   async function carregarReferencias() {
     await Promise.all(estado.exercicios.map(async e => {
       if (!anteriores.has(e.exercicio_id)) {
-        anteriores.set(e.exercicio_id, (await ultimasSeries(e.exercicio_id, { excluirTreinoId: estado.id }))?.series || []);
-        historicos.set(e.exercicio_id, await recordesExercicio(e.exercicio_id, { excluirTreinoId: estado.id }));
+        anteriores.set(e.exercicio_id, (await ultimasSeries(e.exercicio_id, { excluirTreinoId: estado.id, treino: estado }))?.series || []);
+        historicos.set(e.exercicio_id, await recordesExercicio(e.exercicio_id, { excluirTreinoId: estado.id, treino: estado }));
       }
     }));
   }

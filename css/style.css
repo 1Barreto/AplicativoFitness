@@ -1435,3 +1435,9 @@ body.com-tela-salvar .sessao-topo-fixa { display: none; }
 /* Desempenho: o navegador só desenha os itens de listas longas quando chegam perto da tela */
 .item-hist { content-visibility: auto; contain-intrinsic-size: auto 170px; }
 .lista-exercicios .item-exercicio { content-visibility: auto; contain-intrinsic-size: auto 64px; }
+
+/* Página do exercício: filtro por treino */
+.filtro-treino { display: flex; gap: 8px; overflow-x: auto; margin: 16px 0 4px; padding-bottom: 2px; scrollbar-width: none; }
+.filtro-treino::-webkit-scrollbar { display: none; }
+.filtro-treino .chip { flex: none; white-space: nowrap; }
+.filtro-treino .chip small { opacity: .6; margin-left: 2px; }

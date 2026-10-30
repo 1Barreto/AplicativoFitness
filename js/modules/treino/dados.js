@@ -91,7 +91,8 @@ export const excluirRotina = id => DB.excluir(T.ROTINAS, id);
 // Lista ordenada e recordes ficam guardados até os treinos mudarem
 // (recalcular a cada tela pesava com centenas de treinos).
 let cacheTreinos = null, cacheRecordes = null;
-Bus.on('dados:alterados', ({ tabela }) => { if (tabela === T.TREINOS || tabela === '*') { cacheTreinos = null; cacheRecordes = null; } });
+Bus.on('dados:alterados', ({ tabela }) => { if (tabela === T.TREINOS || tabela === '*') cacheTreinos = null;
+  if (tabela === T.TREINOS || tabela === T.ROTINAS || tabela === '*') cacheRecordes = null; });
 
 export async function listarTreinos() {
   cacheTreinos ||= DB.todos(T.TREINOS).then(t => t.filter(x => x.fim).sort((a, b) => (b.inicio || '').localeCompare(a.inicio || '')))
@@ -121,14 +122,33 @@ export function resumoTreino(t, mapa) {
 }
 
 // Séries de um exercício no treino mais recente em que ele apareceu
-export async function ultimasSeries(exercicioId, { excluirTreinoId = null } = {}) {
+// Identifica "o mesmo treino" (ex.: Posterior I) para comparar a progressão só
+// dentro dele: pela rotina ligada ou, nos importados do Hevy, pelo nome da rotina.
+// Retorna uma função treino -> chave.
+export async function chaveDeTreino() {
+  const rotinas = await listarRotinas();
+  const nome = x => normalizar(x || '').trim();
+  const ids = new Set(rotinas.map(r => r.id));
+  const porNome = new Map(rotinas.map(r => [nome(r.nome), r.id]));
+  return t => (t.rotina_id && ids.has(t.rotina_id) ? t.rotina_id : porNome.get(nome(t.nome))) || t.rotina_id || `nome:${nome(t.nome)}`;
+}
+
+// Séries feitas da última vez. Com "treino" ({rotina_id, nome}), prefere a última
+// vez naquele mesmo treino; se nunca foi feito nele, usa a última de qualquer treino.
+export async function ultimasSeries(exercicioId, { excluirTreinoId = null, treino = null } = {}) {
   const treinos = await listarTreinos();
+  const chave = treino && await chaveDeTreino();
+  const alvo = chave && chave(treino);
+  let qualquer = null;
   for (const t of treinos) {
     if (t.id === excluirTreinoId) continue;
     const e = (t.exercicios || []).find(x => x.exercicio_id === exercicioId && x.series.some(s => s.feita));
-    if (e) return { treino: t, series: e.series.filter(s => s.feita) };
+    if (!e) continue;
+    const r = { treino: t, series: e.series.filter(s => s.feita) };
+    if (!alvo || chave(t) === alvo) return r;
+    qualquer ||= r;
   }
-  return null;
+  return qualquer;
 }
 
 // Histórico de um exercício (mais recente primeiro)
@@ -157,11 +177,14 @@ export function melhoresDeSeries(series) {
   return m;
 }
 
-export async function recordesExercicio(exercicioId, { excluirTreinoId = null } = {}) {
+// Melhores marcas anteriores do exercício. Com "treino", só dentro daquele treino.
+export async function recordesExercicio(exercicioId, { excluirTreinoId = null, treino = null } = {}) {
   const treinos = await listarTreinos();
+  const chave = treino && await chaveDeTreino();
+  const alvo = chave && chave(treino);
   const todas = [];
   treinos.forEach(t => {
-    if (t.id === excluirTreinoId) return;
+    if (t.id === excluirTreinoId || (alvo && chave(t) !== alvo)) return;
     (t.exercicios || []).forEach(e => { if (e.exercicio_id === exercicioId) todas.push(...e.series); });
   });
   return melhoresDeSeries(todas);
@@ -180,20 +203,22 @@ export function recordesBatidos(serie, anteriores) {
 export const NOMES_RECORDE = { carga: 'Maior carga', e1rm: 'Melhor 1RM est.', volume: 'Maior volume' };
 
 // Percorre os treinos em ordem cronológica e marca, em cada treino, a melhor
-// série de cada tipo de recorde quando ela supera tudo o que veio antes.
-// A primeira vez que um exercício é feito não conta como recorde.
+// série de cada tipo de recorde quando ela supera tudo o que veio antes no
+// mesmo treino (Posterior I compara só com Posterior I).
+// A primeira vez que um exercício é feito naquele treino não conta como recorde.
 // Retorna Map(serieUid -> ['carga' | 'e1rm' | 'volume']).
 export function mapaDeRecordes() {
   cacheRecordes ||= calcularRecordes().catch(e => { cacheRecordes = null; throw e; });
   return cacheRecordes;
 }
 async function calcularRecordes() {
-  const treinos = (await listarTreinos()).slice().reverse();
+  const [treinos, chave] = await Promise.all([listarTreinos().then(l => l.reverse()), chaveDeTreino()]);
   const melhores = new Map();
   const resultado = new Map();
   const marcar = (uid, tipo) => resultado.set(uid, [...(resultado.get(uid) || []), tipo]);
   treinos.forEach(t => (t.exercicios || []).forEach(e => {
-    const antes = melhores.get(e.exercicio_id);
+    const k = `${chave(t)}|${e.exercicio_id}`;
+    const antes = melhores.get(k);
     const desta = melhoresDeSeries(e.series);
     if (antes) {
       const series = e.series.filter(valida);
@@ -205,7 +230,7 @@ async function calcularRecordes() {
         }
       }
     }
-    melhores.set(e.exercicio_id, {
+    melhores.set(k, {
       carga: Math.max(antes?.carga || 0, desta.carga),
       e1rm: Math.max(antes?.e1rm || 0, desta.e1rm),
       volume: Math.max(antes?.volume || 0, desta.volume),
