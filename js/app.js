@@ -183,6 +183,19 @@ async function iniciar() {
   for (const g of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(g, ev => ev.preventDefault(), { passive: false });
   document.addEventListener('touchmove', ev => { if (ev.touches.length > 1 || (ev.scale && ev.scale !== 1)) ev.preventDefault(); }, { passive: false });
 
+  // Ao tocar num campo que já tem texto, seleciona tudo: o que for digitado
+  // substitui o valor (ex.: trocar o peso de uma série). No iPhone o toque
+  // posiciona o cursor depois do foco, então a seleção vai num instante depois.
+  const TIPOS_SELECIONAR = new Set(['text', 'search', 'number', 'tel', 'email', 'url', 'decimal', '']);
+  document.addEventListener('focusin', ev => {
+    const c = ev.target;
+    if (!(c instanceof HTMLInputElement) || !TIPOS_SELECIONAR.has(c.type) || c.readOnly || !c.value) return;
+    setTimeout(() => {
+      if (document.activeElement !== c) return;
+      try { c.setSelectionRange(0, c.value.length); } catch { c.select(); } // type=number não aceita setSelectionRange
+    }, 10);
+  });
+
   // O áudio no iPhone só pode tocar depois de um toque do usuário.
   addEventListener('pointerdown', () => som.desbloquear(), { once: true, capture: true });
 
