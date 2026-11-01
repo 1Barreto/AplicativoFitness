@@ -1441,3 +1441,11 @@ body.com-tela-salvar .sessao-topo-fixa { display: none; }
 .filtro-treino::-webkit-scrollbar { display: none; }
 .filtro-treino .chip { flex: none; white-space: nowrap; }
 .filtro-treino .chip small { opacity: .6; margin-left: 2px; }
+
+/* Dieta: adição rápida */
+.item-rapido { border: 1px solid var(--borda); border-radius: 14px; margin-bottom: 10px; }
+.item-rapido:last-child { border-bottom: 1px solid var(--borda); }
+.form-rapido .rapido-kcal .campo { font-size: 28px; font-weight: 700; text-align: center; }
+.form-rapido .rapido-macros { grid-template-columns: repeat(3, 1fr); }
+.form-rapido .rapido-macros .campo { text-align: center; }
+.form-rapido .rapido-macros span.m-p, .form-rapido .rapido-macros span.m-c, .form-rapido .rapido-macros span.m-g { color: var(--m); }

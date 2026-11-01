@@ -230,10 +230,17 @@ export function somar(itens) {
 }
 
 // Itens usados recentemente (um por alimento, com a última quantidade)
+// Adição rápida: só as calorias (e, se quiser, os macros) de uma refeição, sem
+// escolher alimento. Fica no diário como um item de 100 g com esses valores.
+export function alimentoRapido({ nome = '', kcal = 0, p = null, c = null, g = null } = {}) {
+  return { fonte: 'rapido', ref: 'rapido', nome: nome || 'Adição rápida', marca: '', n: { kcal, p, c, g }, porcoes: [] };
+}
+
 export async function recentes(limite = 40) {
   const l = (await DB.todos(T.diario)).sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
   const vistos = new Map();
   for (const i of l) {
+    if (i.alimento.fonte === 'rapido') continue;
     const k = `${i.alimento.fonte}:${i.alimento.ref}`;
     if (!vistos.has(k)) vistos.set(k, { ...i.alimento, ultimaQtd: i.gramas, ultimaPorcao: i.porcao });
     if (vistos.size >= limite) break;
@@ -411,6 +418,7 @@ const nf1 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 export const fmtKcal = v => nf0.format(Math.round(v || 0));
 export const fmtG = v => (v >= 10 ? nf0.format(Math.round(v)) : nf1.format(Math.round((v || 0) * 10) / 10));
 export function fmtQtd(item) {
+  if (item.alimento?.fonte === 'rapido') return 'Rápido';
   if (item.porcao) return `${nf1.format(item.porcao.qtd)} × ${item.porcao.nome}`;
   return `${nf1.format(item.gramas)} g`;
 }

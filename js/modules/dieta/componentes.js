@@ -5,7 +5,7 @@ import { folha, toast, Icone } from '../../core/ui.js';
 import { esc, num, fmtNum, debounce, normalizar } from '../../core/util.js';
 import {
   carregarBase, buscarAlimentos, buscarOFF, listarMeusAlimentos, listarRefeicoesSalvas, recentes, salvarAlimento,
-  calcular, somar, fmtKcal, fmtG, NUTRIENTES,
+  calcular, somar, fmtKcal, fmtG, NUTRIENTES, alimentoRapido,
 } from './dados.js';
 
 // Distribuição das calorias entre os macros (barra colorida)
@@ -62,6 +62,7 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
             <button class="chip" data-aba="meus">Meus alimentos</button>
           </div>
         </div>
+        <button class="item-alimento item-criar item-rapido" data-rapido><span class="item-add">${Icone.mais}</span><span class="item-texto"><strong>Adição rápida</strong><small>Só as calorias, ou calorias e macros, sem escolher alimento</small></span></button>
         <div class="lista-exercicios" data-lista></div>
         <div class="rodape-fixo"><button class="btn btn-primario btn-bloco" data-pronto>Concluir</button></div>`;
       const el = corpo.querySelector('[data-lista]');
@@ -172,6 +173,9 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
           if (b) marcar(b);
         }
       };
+      corpo.querySelector('[data-rapido]').onclick = async () => {
+        if (await aoEscolher(alimentoRapido())) { adicionados++; pronto.textContent = `Concluir (${adicionados})`; }
+      };
       pronto.onclick = () => fechar(adicionados);
       desenhar();
       if (matchMedia('(min-width: 700px)').matches) setTimeout(() => campo.focus(), 60);
@@ -182,6 +186,7 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
 // Folha de quantidade. Retorna { alimento, gramas, porcao, refeicao } | { remover: true } | undefined
 // (alimento pode mudar se o usuário personalizar um alimento da TBCA)
 export function escolherQuantidade(alimento, { gramas = null, porcao = null, refeicoes = null, refeicao = null, botao = 'Adicionar', remover = false } = {}) {
+  if (alimento.fonte === 'rapido') return formularioRapido(alimento, { refeicoes, refeicao, botao, remover });
   const porcoes = alimento.porcoes || [];
   let unidade = porcao ? porcoes.findIndex(p => p.nome === porcao.nome) : (gramas == null && porcoes.length ? 0 : -1);
   let qtd = porcao && unidade >= 0 ? porcao.qtd : unidade >= 0 && gramas == null ? 1 : (gramas ?? 100);
@@ -268,6 +273,67 @@ export function escolherQuantidade(alimento, { gramas = null, porcao = null, ref
       campo.addEventListener('keydown', e => { if (e.key === 'Enter') corpo.querySelector('[data-ok]').click(); });
       desenharRapidos(); atualizar();
       setTimeout(() => { campo.focus(); campo.select(); }, 80);
+    },
+  });
+}
+
+// Adição rápida: calorias obrigatórias, macros opcionais. Se só os macros forem
+// preenchidos, as calorias saem deles (4 kcal/g proteína e carbo, 9 kcal/g gordura).
+// Mesmo retorno de escolherQuantidade.
+function formularioRapido(alimento, { refeicoes, refeicao, botao, remover }) {
+  const n = alimento.n || {};
+  const editando = alimento.nome !== 'Adição rápida' || n.kcal > 0;
+  const val = v => (v == null || (v === 0 && !editando) ? '' : fmtNum(Math.round(v * 10) / 10));
+  return folha({
+    titulo: botao === 'Adicionar' ? 'Adição rápida' : 'Editar adição rápida', classe: 'modal-quantidade',
+    conteudo: (corpo, fechar) => {
+      corpo.innerHTML = `
+        <div class="form form-rapido">
+          <label class="rapido-kcal"><span>Calorias <small>(kcal)</small></span><input class="campo qtd-numero" name="kcal" inputmode="decimal" value="${val(n.kcal)}" placeholder="0"></label>
+          <div class="grade-campos rapido-macros">
+            <label><span class="m-p">Proteína <small>(g)</small></span><input class="campo" name="p" inputmode="decimal" value="${val(n.p)}" placeholder="opcional"></label>
+            <label><span class="m-c">Carbo <small>(g)</small></span><input class="campo" name="c" inputmode="decimal" value="${val(n.c)}" placeholder="opcional"></label>
+            <label><span class="m-g">Gordura <small>(g)</small></span><input class="campo" name="g" inputmode="decimal" value="${val(n.g)}" placeholder="opcional"></label>
+          </div>
+          <p class="sutil pequeno" data-dica></p>
+          <label><span>Descrição <small>(opcional)</small></span><input class="campo" name="nome" value="${esc(alimento.nome === 'Adição rápida' ? '' : alimento.nome)}" placeholder="Ex.: Almoço no restaurante"></label>
+          ${refeicoes ? `<label class="rotulo">Refeição<select class="campo" data-refeicao>${refeicoes.map(r => `<option value="${esc(r.id)}" ${r.id === refeicao ? 'selected' : ''}>${esc(r.nome)}</option>`).join('')}</select></label>` : ''}
+        </div>
+        <div class="linha-botoes">
+          ${remover ? '<button class="btn btn-secundario perigo" data-remover>Remover</button>' : ''}
+          <button class="btn btn-primario" data-ok>${esc(botao)}</button>
+        </div>`;
+      const campo = k => corpo.querySelector(`[name=${k}]`);
+      const dica = corpo.querySelector('[data-dica]');
+      const lerMacros = () => ({ p: num(campo('p').value), c: num(campo('c').value), g: num(campo('g').value) });
+      const kcalDosMacros = m => (m.p || 0) * 4 + (m.c || 0) * 4 + (m.g || 0) * 9;
+      const atualizar = () => {
+        const m = lerMacros();
+        const temMacro = m.p != null || m.c != null || m.g != null;
+        const kcal = num(campo('kcal').value);
+        dica.textContent = !temMacro ? 'Os macros são opcionais.'
+          : kcal == null ? `Calorias pelos macros: ${fmtKcal(kcalDosMacros(m))} kcal.`
+          : `Os macros somam ${fmtKcal(kcalDosMacros(m))} kcal.`;
+      };
+      corpo.addEventListener('input', atualizar);
+      corpo.querySelector('[data-ok]').onclick = () => {
+        const m = lerMacros();
+        const kcal = num(campo('kcal').value) ?? (m.p != null || m.c != null || m.g != null ? Math.round(kcalDosMacros(m)) : null);
+        if (!(kcal > 0)) { toast('Informe as calorias', 'erro'); campo('kcal').focus(); return; }
+        if ([m.p, m.c, m.g].some(v => v != null && v < 0)) { toast('Os macros não podem ser negativos', 'erro'); return; }
+        fechar({
+          alimento: alimentoRapido({ nome: campo('nome').value.trim(), kcal, ...m }),
+          gramas: 100, porcao: null,
+          refeicao: corpo.querySelector('[data-refeicao]')?.value ?? refeicao,
+        });
+      };
+      corpo.querySelector('[data-remover]')?.addEventListener('click', () => fechar({ remover: true }));
+      corpo.querySelectorAll('input').forEach(i => {
+        i.addEventListener('focus', () => i.select());
+        i.addEventListener('keydown', e => { if (e.key === 'Enter') corpo.querySelector('[data-ok]').click(); });
+      });
+      atualizar();
+      setTimeout(() => campo('kcal').focus(), 80);
     },
   });
 }
