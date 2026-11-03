@@ -222,9 +222,11 @@ export function calcular(n, gramas) {
 }
 export function somar(itens) {
   const t = Object.fromEntries(NUTRIENTES.map(([k]) => [k, 0]));
+  // Cada item entra arredondado como aparece na tela (kcal inteiras, macros com
+  // uma casa), para a soma dos itens bater com o total mostrado
   itens.forEach(i => {
     const v = calcular(i.alimento.n, i.gramas);
-    NUTRIENTES.forEach(([k]) => { t[k] += v[k]; });
+    NUTRIENTES.forEach(([k]) => { t[k] += k === 'kcal' ? Math.round(v[k]) : Math.round(v[k] * 10) / 10; });
   });
   return t;
 }
@@ -252,10 +254,52 @@ export async function recentes(limite = 40) {
 export async function listarMeusAlimentos() {
   return (await DB.todos(T.alimentos)).map(a => ({ ...a, fonte: 'meu', ref: a.id })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
-export const salvarAlimento = a => {
+export async function salvarAlimento(a) {
   const { fonte, ref, ...resto } = a;
-  return DB.salvar(T.alimentos, resto);
-};
+  const salvo = await DB.salvar(T.alimentos, resto);
+  if (a.id) await propagarAlimento({ ...resto, fonte: 'meu', ref: a.id });
+  return salvo;
+}
+
+// Quando um alimento seu é editado, o plano de treino/off, as refeições salvas e o
+// que ainda está só planejado (de hoje em diante) passam a usar os valores novos.
+// Itens medidos em porção recalculam os gramas pelo peso novo da porção.
+// O que já foi feito fica como estava.
+function atualizarItem(i, a) {
+  if (i?.alimento?.fonte !== 'meu' || i.alimento.ref !== a.ref) return null;
+  const novo = { ...i, alimento: copiaAlimento(a) };
+  const p = i.porcao && (a.porcoes || []).find(x => x.nome === i.porcao.nome);
+  if (p) {
+    novo.porcao = { ...i.porcao, gramas: p.gramas };
+    novo.gramas = Math.round(p.gramas * (i.porcao.qtd || 1) * 10) / 10;
+  }
+  return novo;
+}
+async function propagarAlimento(a) {
+  let n = 0;
+  const config = await obterConfig();
+  let mudouPlano = false;
+  const planos = {};
+  for (const [tipo, refs] of Object.entries(config.planos || {})) {
+    planos[tipo] = {};
+    for (const [r, itens] of Object.entries(refs || {})) {
+      planos[tipo][r] = itens.map(i => { const x = atualizarItem(i, a); if (x) { mudouPlano = true; n++; } return x || i; });
+    }
+  }
+  if (mudouPlano) await salvarConfig({ ...config, planos });
+  for (const r of await DB.todos(T.refeicoes)) {
+    let mudou = false;
+    const itens = (r.itens || []).map(i => { const x = atualizarItem(i, a); if (x) { mudou = true; n++; } return x || i; });
+    if (mudou) await DB.salvar(T.refeicoes, { ...r, itens });
+  }
+  const hoje = hojeISO();
+  for (const i of await DB.todos(T.diario)) {
+    if (i.dia < hoje || itemFeito(i, hoje)) continue;
+    const x = atualizarItem(i, a);
+    if (x) { await DB.salvar(T.diario, x); n++; }
+  }
+  return n;
+}
 export const excluirAlimento = id => DB.excluir(T.alimentos, id);
 
 // ---------- Refeições salvas (combinações prontas) ----------
