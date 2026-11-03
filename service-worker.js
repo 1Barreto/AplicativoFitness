@@ -9,7 +9,7 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v84';
+const VERSAO = 'v85';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
 const CACHE_FOTOS = 'fotos-v1'; // fotos dos exercícios (não mudam)
@@ -40,6 +40,7 @@ const ARQUIVOS = [
   './js/modules/treino/treino.js',
   './js/modules/treino/sessao.js',
   './js/modules/treino/historico.js',
+  './js/modules/treino/compartilhar.js',
   './js/modules/treino/progresso.js',
   './js/modules/treino/importar-hevy.js',
   './js/modules/treino/fotos.js',
@@ -47,10 +48,13 @@ const ARQUIVOS = [
   './js/modules/dieta/dados.js',
   './js/modules/dieta/componentes.js',
   './js/modules/dieta/dieta.js',
+  './js/modules/dieta/gasto.js',
+  './js/modules/resumo.js',
   './js/modules/dieta/tbca.json',
   './js/modules/dieta/tabelas.json',
   './js/modules/corpo/dados.js',
   './js/modules/corpo/corpo.js',
+  './js/modules/corpo/saude.js',
   './js/modules/perfil/perfil.js',
   './icons/icon-192.png',
   './icons/icon-512.png',

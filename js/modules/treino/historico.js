@@ -9,6 +9,7 @@ import {
 } from './dados.js';
 import { rotulosSeries, fmtRir } from './componentes.js';
 import { montarEditor, iniciarTreino } from './sessao.js';
+import { compartilharTreino } from './compartilhar.js';
 
 async function telaLista(el) {
   definirTitulo('Histórico', { voltar: '#/perfil' });
@@ -96,7 +97,7 @@ async function telaDetalhe(el, { id }, query) {
   const totalPrs = t.exercicios.reduce((n, e) => n + e.series.filter(s => recordes.has(s.uid)).length, 0);
 
   el.innerHTML = `
-    ${query.novo ? `<div class="cartao cartao-parabens">🎉 <div><strong>Treino concluído!</strong><small>${totalPrs ? `Você bateu ${totalPrs} recorde${totalPrs > 1 ? 's' : ''} hoje.` : 'Bom trabalho, continue assim.'}</small></div></div>` : ''}
+    ${query.novo ? `<div class="cartao cartao-parabens">🎉 <div><strong>Treino concluído!</strong><small>${totalPrs ? `Você bateu ${totalPrs} recorde${totalPrs > 1 ? 's' : ''} hoje.` : 'Bom trabalho, continue assim.'}</small></div><button class="btn btn-secundario btn-mini" data-acao="compartilhar2">${Icone.subir}<span>Compartilhar</span></button></div>` : ''}
     <div class="cartao">
       <div class="ex-topo"><h2>${esc(t.nome)}</h2><button class="icon-btn" data-acao="menu" aria-label="Opções">${Icone.pontos}</button></div>
       <p class="sutil">${fmtDataHora(t.inicio)}</p>
@@ -129,19 +130,23 @@ async function telaDetalhe(el, { id }, query) {
     }).join('')}
     <div class="linha-botoes">
       <button class="btn btn-primario" data-acao="repetir">${Icone.play}<span>Repetir treino</span></button>
+      <button class="btn btn-secundario" data-acao="compartilhar">${Icone.subir}<span>Compartilhar</span></button>
       <a class="btn btn-secundario" href="#/historico/${t.id}/editar">${Icone.editar}<span>Editar</span></a>
     </div>`;
 
   el.querySelector('[data-acao=repetir]').onclick = () => iniciarTreino({ modelo: t });
+  el.querySelectorAll('[data-acao^=compartilhar]').forEach(b => b.onclick = () => compartilharTreino(t, mapa, recordes));
   el.querySelector('[data-acao=menu]').onclick = async () => {
     const op = await menu(t.nome, [
       { texto: 'Editar treino', valor: 'editar', icone: Icone.editar },
       { texto: 'Repetir treino', valor: 'repetir', icone: Icone.play },
+      { texto: 'Compartilhar imagem', valor: 'compartilhar', icone: Icone.subir },
       { texto: 'Salvar como rotina', valor: 'rotina', icone: Icone.copiar },
       { texto: 'Excluir treino', valor: 'excluir', icone: Icone.lixo, perigo: true },
     ]);
     if (op === 'editar') location.hash = `#/historico/${t.id}/editar`;
     else if (op === 'repetir') iniciarTreino({ modelo: t });
+    else if (op === 'compartilhar') compartilharTreino(t, mapa, recordes);
     else if (op === 'rotina') {
       const n = (await listarRotinas()).length;
       await salvarRotina({

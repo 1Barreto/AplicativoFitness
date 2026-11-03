@@ -2,6 +2,7 @@
 // (ex.: o futuro módulo de dieta usará pesoAtual()).
 
 import { DB } from '../../core/db.js';
+import { dataInput } from '../../core/util.js';
 
 export const TABELA_MEDIDAS = 'medidas';
 
@@ -40,3 +41,27 @@ export async function ultimoValor(campo) {
 }
 
 export const pesoAtual = () => ultimoValor('peso');
+
+// Tendência do peso: média móvel exponencial por dia (10% do peso novo a cada
+// pesagem). Suaviza o sobe e desce diário de água e sal. Dias sem pesagem
+// repetem a tendência do dia anterior.
+// Retorna Map('aaaa-mm-dd' -> kg) do primeiro dia com peso até "ate" (inclusive).
+export function tendenciaPeso(medidas, ate = dataInput()) {
+  const porDia = new Map();
+  [...medidas].filter(m => m.peso > 0).sort((a, b) => (a.data || '').localeCompare(b.data || ''))
+    .forEach(m => porDia.set(dataInput(m.data), m.peso)); // a última do dia vale
+  const dias = [...porDia.keys()].sort();
+  const r = new Map();
+  if (!dias.length) return r;
+  let t = porDia.get(dias[0]);
+  for (let d = dias[0]; d <= ate; d = proximoDia(d)) {
+    if (porDia.has(d)) t += 0.1 * (porDia.get(d) - t);
+    r.set(d, Math.round(t * 100) / 100);
+  }
+  return r;
+}
+function proximoDia(d) {
+  const x = new Date(`${d}T12:00:00`);
+  x.setDate(x.getDate() + 1);
+  return dataInput(x);
+}

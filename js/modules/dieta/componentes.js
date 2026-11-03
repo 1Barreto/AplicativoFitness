@@ -2,7 +2,8 @@
 // formulário de alimento personalizado e metas.
 
 import { folha, toast, Icone } from '../../core/ui.js';
-import { esc, num, fmtNum, debounce, normalizar } from '../../core/util.js';
+import { esc, num, fmtNum, debounce, normalizar, carregarScript } from '../../core/util.js';
+import { CDN } from '../../config.js';
 import {
   carregarBase, buscarAlimentos, buscarOFF, listarMeusAlimentos, listarRefeicoesSalvas, recentes, salvarAlimento,
   calcular, somar, fmtKcal, fmtG, NUTRIENTES, alimentoRapido,
@@ -55,7 +56,10 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
       let adicionados = 0;
       corpo.innerHTML = `
         <div class="busca-barra">
-          <label class="campo-busca">${Icone.busca}<input type="search" placeholder="Buscar alimento, marca ou código de barras" data-busca autocomplete="off"></label>
+          <div class="linha-busca">
+            <label class="campo-busca">${Icone.busca}<input type="search" placeholder="Buscar alimento, marca ou código de barras" data-busca autocomplete="off"></label>
+            ${navigator.mediaDevices?.getUserMedia ? `<button class="icon-btn btn-scan" data-scan aria-label="Ler código de barras com a câmera" title="Ler código de barras">${Icone.codigoBarras}</button>` : ''}
+          </div>
           <div class="abas-mini" data-abas>
             ${aoEscolherRefeicao ? '<button class="chip ativo" data-aba="refeicoes">Refeições salvas</button>' : ''}
             <button class="chip ${aoEscolherRefeicao ? '' : 'ativo'}" data-aba="recentes">Recentes</button>
@@ -173,6 +177,23 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
           if (b) marcar(b);
         }
       };
+      // Código de barras pela câmera: achou o produto, já abre a quantidade
+      corpo.querySelector('[data-scan]')?.addEventListener('click', async () => {
+        const codigo = await lerCodigoDeBarras();
+        if (!codigo) return;
+        campo.value = codigo;
+        el.innerHTML = '<p class="sutil centro lista-vazia">Buscando o produto…</p>';
+        abas.hidden = true;
+        let achados = [];
+        try { achados = await buscarOFF(codigo); } catch { /* sem internet */ }
+        if (achados.length === 1) {
+          desenhar();
+          if (await aoEscolher(achados[0])) { adicionados++; pronto.textContent = `Concluir (${adicionados})`; }
+        } else {
+          if (!achados.length) toast(navigator.onLine === false ? 'Sem internet para buscar o produto' : `Produto ${codigo} não encontrado no Open Food Facts`, 'erro', 3500);
+          desenhar();
+        }
+      });
       corpo.querySelector('[data-rapido]').onclick = async () => {
         if (await aoEscolher(alimentoRapido())) { adicionados++; pronto.textContent = `Concluir (${adicionados})`; }
       };
@@ -181,6 +202,78 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
       if (matchMedia('(min-width: 700px)').matches) setTimeout(() => campo.focus(), 60);
     },
   });
+}
+
+// Leitor de código de barras (EAN/UPC dos produtos). Usa o leitor do próprio
+// navegador quando existe; senão, a biblioteca ZXing (baixada só na primeira
+// vez que você usa). Retorna o código lido ou null.
+export function lerCodigoDeBarras() {
+  return folha({
+    titulo: 'Código de barras', classe: 'modal-scan',
+    conteudo: (corpo, fechar) => {
+      corpo.innerHTML = `
+        <div class="scan-video"><video playsinline muted autoplay></video><i class="scan-mira"></i></div>
+        <p class="sutil centro pequeno" data-status>Abrindo a câmera…</p>`;
+      const video = corpo.querySelector('video');
+      const status = corpo.querySelector('[data-status]');
+      let parar = () => {};
+      const achou = codigo => { parar(); if (navigator.vibrate) navigator.vibrate(60); fechar(codigo); };
+      // Fecha a câmera quando a folha sai da tela (botão fechar, toque fora)
+      const vigia = new MutationObserver(() => { if (!corpo.isConnected) { parar(); vigia.disconnect(); } });
+      vigia.observe(document.getElementById('camada-modal'), { childList: true });
+      (async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } }, audio: false });
+          let ativo = true;
+          parar = () => { ativo = false; stream.getTracks().forEach(t => t.stop()); };
+          if (!corpo.isConnected) { parar(); return; } // fechou enquanto pedia a câmera
+          video.srcObject = stream;
+          await video.play().catch(() => {});
+          const ler = await leitorDeQuadros();
+          status.textContent = 'Aponte para o código de barras do produto';
+          const loop = async () => {
+            if (!ativo) return;
+            const codigo = video.videoWidth ? await ler(video).catch(() => null) : null;
+            if (codigo && ativo) { achou(codigo); return; }
+            setTimeout(loop, 180);
+          };
+          loop();
+        } catch (e) {
+          parar();
+          status.textContent = e?.name === 'NotAllowedError'
+            ? 'Sem permissão para usar a câmera. Libere em Ajustes do iPhone > Safari > Câmera.'
+            : navigator.onLine === false && !window.ZXing ? 'O leitor precisa de internet na primeira vez.'
+            : 'Não foi possível abrir a câmera.';
+        }
+      })();
+    },
+  });
+}
+
+// Função que lê um quadro do vídeo e devolve o código (ou null)
+async function leitorDeQuadros() {
+  const formatos = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+  if ('BarcodeDetector' in window && (await window.BarcodeDetector.getSupportedFormats?.().catch(() => []) || []).includes('ean_13')) {
+    const det = new window.BarcodeDetector({ formats: formatos });
+    return async video => (await det.detect(video))[0]?.rawValue || null;
+  }
+  if (!window.ZXing) await carregarScript(CDN.zxing);
+  const Z = window.ZXing;
+  const dicas = new Map([[Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E]], [Z.DecodeHintType.TRY_HARDER, true]]);
+  const leitor = new Z.MultiFormatReader();
+  leitor.setHints(dicas);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  return async video => {
+    // Quadro reduzido (até 800 px de largura): mais rápido e lê igual
+    const esc = Math.min(1, 800 / video.videoWidth);
+    canvas.width = Math.round(video.videoWidth * esc); canvas.height = Math.round(video.videoHeight * esc);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    try {
+      const bmp = new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(canvas)));
+      return leitor.decodeWithState(bmp).getText();
+    } catch { return null; } // quadro sem código
+  };
 }
 
 // Folha de quantidade. Retorna { alimento, gramas, porcao, refeicao } | { remover: true } | undefined

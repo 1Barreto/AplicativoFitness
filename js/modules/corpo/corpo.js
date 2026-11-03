@@ -5,6 +5,7 @@ import { esc, num, fmtNum, fmtData, fmtRelativo, dataInput } from '../../core/ut
 import { Icone, definirTitulo, toast, confirmar, folha, vazio } from '../../core/ui.js';
 import { criarGrafico } from '../../core/graficos.js';
 import { TABELA_MEDIDAS, CAMPOS_MEDIDA, listarMedidas, salvarMedida, excluirMedida, pesoAtual } from './dados.js';
+import { importarDoSaude } from './saude.js';
 
 const rotulo = Object.fromEntries(CAMPOS_MEDIDA.map(([k, r, u]) => [k, { r, u }]));
 
@@ -56,7 +57,10 @@ async function telaCorpo(el, _p, query) {
   };
 
   el.innerHTML = `
-    <button class="btn btn-primario btn-bloco" data-acao="nova">${Icone.mais}<span>Registrar medidas</span></button>
+    <div class="linha-botoes corpo-acoes">
+      <button class="btn btn-primario" data-acao="nova">${Icone.mais}<span>Registrar medidas</span></button>
+      <button class="btn btn-secundario" data-acao="saude">${Icone.baixar}<span>Peso do app Saúde</span></button>
+    </div>
     ${medidas.length ? `
       <div class="grade-stats">
         ${camposComDados.slice(0, 6).map(([k, r, u]) => `
@@ -84,6 +88,7 @@ async function telaCorpo(el, _p, query) {
       </div>` : vazio(Icone.balanca, 'Nenhuma medida registrada', 'Registre seu peso e medidas para acompanhar a evolução.')}`;
 
   el.querySelector('[data-acao=nova]').onclick = async () => { if (await formularioMedida()) telaCorpo(el, _p, query); };
+  el.querySelector('[data-acao=saude]').onclick = async () => { if (await importarDoSaude()) telaCorpo(el, _p, query); };
   el.querySelectorAll('[data-id]').forEach(b => b.onclick = async () => {
     const m = medidas.find(x => x.id === b.dataset.id);
     const r = await folha({

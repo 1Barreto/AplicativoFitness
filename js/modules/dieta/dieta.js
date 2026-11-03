@@ -160,6 +160,7 @@ async function telaDieta(el, _p, query) {
           <button class="chip" data-acao="metas">${Icone.medidor}<span>Metas</span></button>
           <a class="chip" href="#/dieta/alimentos">${Icone.dieta}<span>Meus alimentos</span></a>
           <a class="chip" href="#/dieta/refeicoes">${Icone.copiar}<span>Refeições</span></a>
+          <a class="chip" href="#/dieta/gasto">${Icone.progresso}<span>Gasto calórico</span></a>
           ${bloqueado || (!itens.length && temPlano) ? '' : `<button class="chip" data-acao="plano">${Icone.check}<span>Aplicar ${nomePlano}</span></button>`}
           ${!itens.length && !bloqueado ? `<button class="chip" data-acao="copiar-dia">${Icone.historico}<span>Copiar dia anterior</span></button>` : ''}
         </nav>
