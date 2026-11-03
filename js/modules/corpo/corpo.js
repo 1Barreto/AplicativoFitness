@@ -98,20 +98,22 @@ async function telaCorpo(el, _p, query) {
     if (r === 'excluir' && await confirmar('Excluir este registro?', { ok: 'Excluir', perigo: true })) { await excluirMedida(m.id); toast('Registro excluído'); telaCorpo(el, _p, query); }
   });
 
-  let grafico = null;
+  let grafico = null, pedido = 0;
   const desenharGrafico = async (k) => {
-    grafico?.destroy();
+    const meu = ++pedido;
     const pontos = medidas.filter(m => m[k] !== null && m[k] !== undefined).reverse();
     const canvas = el.querySelector('canvas'); if (!canvas) return;
-    grafico = await criarGrafico(canvas, {
+    const g = await criarGrafico(canvas, {
       rotulos: pontos.map(m => new Date(m.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })),
       series: [{ nome: rotulo[k].r, dados: pontos.map(m => m[k]) }],
       sufixo: ` ${rotulo[k].u}`,
     });
+    if (meu !== pedido) { g?.destroy(); return; }
+    grafico = g;
   };
   el.querySelector('[data-campo-grafico]')?.addEventListener('change', e => desenharGrafico(e.target.value));
   if (medidas.length) desenharGrafico(camposComDados.some(([k]) => k === campoAtual) ? campoAtual : camposComDados[0][0]);
-  return () => grafico?.destroy();
+  return () => { pedido++; grafico?.destroy(); };
 }
 
 async function cartaoPeso(el) {

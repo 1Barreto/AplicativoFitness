@@ -121,7 +121,6 @@ export function resumoTreino(t, mapa) {
   return { volume, series, duracao, exercicios: (t.exercicios || []).length };
 }
 
-// Séries de um exercício no treino mais recente em que ele apareceu
 // Identifica "o mesmo treino" (ex.: Posterior I) para comparar a progressão só
 // dentro dele: pela rotina ligada ou, nos importados do Hevy, pelo nome da rotina.
 // Retorna uma função treino -> chave.

@@ -188,15 +188,21 @@ async function telaExercicios(el) {
 
 // ---------- Detalhe do exercício ----------
 async function telaExercicio(el, { id }) {
-  const ex = await obterExercicio(id);
+  let ex = await obterExercicio(id);
   definirTitulo(ex.nome, { voltar: () => history.length > 1 ? history.back() : (location.hash = '#/treino/exercicios') });
   const [histTodo, chave] = await Promise.all([historicoExercicio(id), chaveDeTreino()]);
   // Filtro por treino (Posterior I, Posterior II…): a progressão se compara dentro do mesmo treino
   const grupos = new Map();
   histTodo.forEach(h => { const k = chave(h.treino); if (!grupos.has(k)) grupos.set(k, { nome: h.treino.nome, n: 0 }); grupos.get(k).n++; });
-  let filtro = '', grafico = null;
+  let filtro = '', grafico = null, pedidoGrafico = 0;
+  // Depois de editar, redesenha esta mesma tela (assim o gráfico antigo é sempre destruído)
+  const recarregar = async () => {
+    ex = await obterExercicio(id);
+    definirTitulo(ex.nome, { voltar: () => history.length > 1 ? history.back() : (location.hash = '#/treino/exercicios') });
+    desenhar();
+  };
   const desenhar = () => {
-    grafico?.destroy(); grafico = null;
+    pedidoGrafico++; grafico?.destroy(); grafico = null;
     const hist = filtro ? histTodo.filter(h => chave(h.treino) === filtro) : histTodo;
     const tudo = hist.flatMap(h => h.series);
     const melhores = melhoresDeSeries(tudo);
@@ -254,13 +260,13 @@ async function telaExercicio(el, { id }) {
       const b = ev.target.closest('[data-k]'); if (!b) return;
       filtro = b.dataset.k; desenhar();
     });
-    el.querySelector('[data-acao=editar]').onclick = async () => { if (await formularioExercicio(ex)) telaExercicio(el, { id }); };
+    el.querySelector('[data-acao=editar]').onclick = async () => { if (await formularioExercicio(ex)) recarregar(); };
     el.querySelector('[data-acao=foto]')?.addEventListener('click', async () => {
       const foto = await escolherFoto(ex);
       if (foto === undefined) return;
       await salvarExercicio({ ...ex, foto });
       toast('Foto atualizada', 'sucesso');
-      telaExercicio(el, { id });
+      recarregar();
     });
     el.querySelector('[data-acao=excluir]')?.addEventListener('click', async () => {
       if (await confirmar('Excluir este exercício? Ele continuará aparecendo nos treinos antigos.', { ok: 'Excluir', perigo: true })) {
@@ -280,9 +286,11 @@ async function telaExercicio(el, { id }) {
         tempo: { nome: 'Tempo', dados: cron.map(h => h.series.reduce((t, s) => t + (s.reps || 0), 0)), sufixo: ' min' },
       };
       const mostrar = async (k) => {
-        grafico?.destroy();
+        const meu = ++pedidoGrafico; // toques rápidos: só o último gráfico fica
         const s = series[k];
-        grafico = await criarGrafico(el.querySelector('canvas'), { rotulos, series: [{ nome: s.nome, dados: s.dados }], sufixo: s.sufixo || '' });
+        const g = await criarGrafico(el.querySelector('canvas'), { rotulos, series: [{ nome: s.nome, dados: s.dados }], sufixo: s.sufixo || '' });
+        if (meu !== pedidoGrafico) { g?.destroy(); return; }
+        grafico = g;
       };
       el.querySelector('[data-abas]').addEventListener('click', ev => {
         const b = ev.target.closest('[data-g]'); if (!b) return;
@@ -293,7 +301,7 @@ async function telaExercicio(el, { id }) {
     }
   };
   desenhar();
-  return () => grafico?.destroy();
+  return () => { pedidoGrafico++; grafico?.destroy(); };
 }
 
 // ---------- Cartões da tela "Hoje" ----------

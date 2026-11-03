@@ -9,6 +9,12 @@ async function chart() {
   return window.Chart;
 }
 
+// Baixa e prepara o Chart.js com o app ocioso, para o primeiro gráfico não esperar por ele.
+export function preCarregarGraficos() {
+  const ir = () => chart().catch(() => {});
+  if ('requestIdleCallback' in window) requestIdleCallback(ir, { timeout: 4000 }); else setTimeout(ir, 1500);
+}
+
 function cores() {
   const css = getComputedStyle(document.documentElement);
   const v = n => css.getPropertyValue(n).trim();
@@ -46,6 +52,8 @@ export async function criarGrafico(canvas, { tipo = 'line', rotulos, series, suf
     canvas.replaceWith(Object.assign(document.createElement('p'), { className: 'sutil', textContent: 'Gráfico indisponível offline (abra o app uma vez com internet).' }));
     return null;
   }
+  // Dois pedidos seguidos no mesmo canvas (toques rápidos): o novo substitui o antigo
+  Chart.getChart(canvas)?.destroy();
   const c = cores();
   const paleta = [c.destaque, c.secundaria, '#8e8e93', '#b98cff', '#ff5c7a'];
   const nf = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });

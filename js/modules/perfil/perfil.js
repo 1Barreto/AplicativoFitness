@@ -122,7 +122,16 @@ async function telaPerfil(el) {
   `;
 
   const graficos = {};
-  const trocar = async (k, criar) => { graficos[k]?.destroy(); graficos[k] = await criar(); };
+  // Cada gráfico tem seu número de pedido: se outro pedido chegou (ou a tela saiu)
+  // enquanto este carregava, o resultado é descartado.
+  const pedidos = {};
+  let saiu = false;
+  const trocar = async (k, criar) => {
+    const meu = pedidos[k] = (pedidos[k] || 0) + 1;
+    const g = await criar();
+    if (saiu || meu !== pedidos[k]) { g?.destroy(); return; }
+    graficos[k] = g;
+  };
 
   // ---------- Estatísticas semanais ----------
   let metrica = pref.get('metrica', 'duracao');
@@ -215,7 +224,7 @@ async function telaPerfil(el) {
     const lista = [...contagem.entries()].sort((a, b) => b[1] - a[1]);
     const area = el.querySelector('[data-area-musc]');
     if (!lista.length) {
-      graficos.musc?.destroy(); graficos.musc = null;
+      pedidos.musc = (pedidos.musc || 0) + 1; graficos.musc?.destroy(); graficos.musc = null;
       area.innerHTML = '<p class="sutil centro">Sem treinos neste período.</p>';
       return;
     }
@@ -287,8 +296,9 @@ async function telaPerfil(el) {
     </a>`).join('') : vazio(Icone.treino, 'Nenhum treino ainda', '', '<a class="btn btn-primario" href="#/treino">Começar a treinar</a>');
 
   desenharCal();
-  await Promise.all([desenharEstat(), desenharMusculos(), desenharPeso()]);
-  return () => Object.values(graficos).forEach(g => g?.destroy());
+  // Sem esperar: a tela aparece na hora e os gráficos entram logo depois
+  desenharEstat(); desenharMusculos(); desenharPeso();
+  return () => { saiu = true; Object.values(graficos).forEach(g => g?.destroy()); };
 }
 
 Modulos.registrar({

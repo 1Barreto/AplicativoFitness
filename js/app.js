@@ -7,6 +7,7 @@ import { Modulos } from './core/modulos.js';
 import { Bus, debounce, dataInput, rolador, rolagemY, rolarPara } from './core/util.js';
 import { Icone, definirTitulo, toast } from './core/ui.js';
 import { som } from './core/som.js';
+import { preCarregarGraficos } from './core/graficos.js';
 import './modules/index.js';
 
 const conteudo = document.getElementById('conteudo');
@@ -201,6 +202,7 @@ async function iniciar() {
 
   await renderizar();
   Auth.iniciar(); // em segundo plano; quando terminar, dispara a sincronização
+  preCarregarGraficos();
 
   if ('serviceWorker' in navigator) {
     // Versão nova assumiu no meio do carregamento: recarrega uma vez para não

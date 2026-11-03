@@ -76,9 +76,13 @@ async function telaProgresso(el) {
       </a>`).join('') || '<p class="sutil">Nenhum exercício com carga registrada.</p>'}</div>
   `;
 
-  const g1 = await criarGrafico(el.querySelector('[data-g=volume]'), { tipo: 'bar', rotulos, series: [{ nome: 'Volume', dados: volume }], sufixo: ' kg' });
-  const g2 = await criarGrafico(el.querySelector('[data-g=freq]'), { tipo: 'bar', rotulos, series: [{ nome: 'Treinos', dados: frequencia }], inteiro: true });
-  return () => { g1?.destroy(); g2?.destroy(); };
+  // Sem esperar: a tela aparece na hora e os gráficos entram logo depois
+  let saiu = false;
+  const g = [];
+  const guardar = x => { if (saiu) x?.destroy(); else g.push(x); };
+  criarGrafico(el.querySelector('[data-g=volume]'), { tipo: 'bar', rotulos, series: [{ nome: 'Volume', dados: volume }], sufixo: ' kg' }).then(guardar);
+  criarGrafico(el.querySelector('[data-g=freq]'), { tipo: 'bar', rotulos, series: [{ nome: 'Treinos', dados: frequencia }], inteiro: true }).then(guardar);
+  return () => { saiu = true; g.forEach(x => x?.destroy()); };
 }
 
 Modulos.registrar({

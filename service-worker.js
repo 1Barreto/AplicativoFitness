@@ -9,7 +9,7 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v83';
+const VERSAO = 'v84';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
 const CACHE_FOTOS = 'fotos-v1'; // fotos dos exercícios (não mudam)
@@ -67,7 +67,9 @@ const CDN = [
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const app = await caches.open(CACHE_APP);
-    await app.addAll(ARQUIVOS.map(u => new Request(u, { cache: 'reload' })));
+    // no-cache: confere cada arquivo com o servidor (ETag); o que não mudou volta
+    // como "304" e não é baixado de novo, então atualizar o app fica bem mais leve.
+    await app.addAll(ARQUIVOS.map(u => new Request(u, { cache: 'no-cache' })));
     // CDN: tenta guardar, mas não impede a instalação se falhar
     const cdn = await caches.open(CACHE_CDN);
     await Promise.all(CDN.map(async u => { try { if (!(await cdn.match(u))) await cdn.add(u); } catch { /* offline */ } }));
