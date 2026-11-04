@@ -311,16 +311,24 @@ export function formularioItem(item = null, { alimento = null } = {}) {
 }
 
 // ---------- Cartão na tela Hoje (só aparece quando há algo a fazer) ----------
+// Terceiro cartão da Hoje (depois da próxima refeição e do próximo treino):
+// a lista de compras, sempre visível.
 async function cartaoHoje(el) {
   const [itens, saldo] = await Promise.all([listarItens(), saldos()]);
-  const comprar = itens.filter(i => precisaComprar(i, saldo.get(i.id) || 0));
+  const comprar = itens.filter(i => precisaComprar(i, saldo.get(i.id) || 0))
+    .sort((a, b) => ((saldo.get(a.id) || 0) > 0) - ((saldo.get(b.id) || 0) > 0) || a.nome.localeCompare(b.nome, 'pt-BR'));
   const vencendo = itens.filter(i => { const d = diasValidade(i); return d != null && d <= 2; });
-  if (!comprar.length && !vencendo.length) { el.remove(); return; }
+  const MAX = 5;
   el.innerHTML = `
     <a class="cartao cartao-estoque" href="#/dieta/estoque/compras">
-      <div class="cartao-cab">${Icone.check}<h3>Estoque</h3><span class="link-cab">Lista de compras${Icone.seta}</span></div>
-      ${comprar.length ? `<p><b>${comprar.length}</b> ${comprar.length === 1 ? 'item acabando' : 'itens acabando'}: ${comprar.slice(0, 4).map(i => esc(i.nome)).join(', ')}${comprar.length > 4 ? '…' : ''}</p>` : ''}
-      ${vencendo.length ? `<p class="sutil pequeno">Vencendo: ${vencendo.slice(0, 3).map(i => `${esc(i.nome)} (${seloTexto(i)})`).join(', ')}</p>` : ''}
+      <div class="cartao-cab">${Icone.estoque}<h3>Lista de compras</h3><span class="link-cab ${comprar.length ? 'tem' : ''}">${comprar.length ? `${comprar.length} ${comprar.length === 1 ? 'item' : 'itens'}` : ''}${Icone.seta}</span></div>
+      ${!itens.length ? '<p class="sutil pequeno">Cadastre o que tem em casa no Estoque. O que acabar aparece aqui.</p>'
+        : !comprar.length ? '<p class="sutil pequeno">Nada para comprar. O estoque está em dia.</p>'
+        : `<ul class="compras-mini">${comprar.slice(0, MAX).map(i => {
+          const s = saldo.get(i.id) || 0, f = faltaPara(i, s), n = nivel(i, s);
+          return `<li><i class="ponto nivel-${n}"></i><span>${esc(i.nome)}</span><small>${f > 0 ? `comprar ${fmtQtd(f, i)}` : NOMES_NIVEL[n]}</small></li>`;
+        }).join('')}</ul>${comprar.length > MAX ? `<p class="sutil pequeno">e mais ${comprar.length - MAX}…</p>` : ''}`}
+      ${vencendo.length ? `<p class="sutil pequeno vencendo-mini">Vencendo: ${vencendo.slice(0, 3).map(i => `${esc(i.nome)} (${seloTexto(i)})`).join(', ')}</p>` : ''}
     </a>`;
 }
 const seloTexto = i => { const d = diasValidade(i); return d < 0 ? 'vencido' : d === 0 ? 'hoje' : d === 1 ? 'amanhã' : `${d} dias`; };
@@ -333,5 +341,5 @@ Modulos.registrar({
     '/dieta/estoque/compras': telaCompras,
     '/dieta/estoque/item/:id': telaItem,
   },
-  cartoesHoje: [{ ordem: 18, render: cartaoHoje }],
+  cartoesHoje: [{ ordem: 12, render: cartaoHoje }],
 });

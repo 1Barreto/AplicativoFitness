@@ -1538,3 +1538,12 @@ body.com-tela-salvar .sessao-topo-fixa { display: none; }
 .campo-unidade { position: relative; display: block; }
 .campo-unidade .campo { padding-right: 40px; width: 100%; }
 .campo-unidade i { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--texto-2); font-weight: 500; pointer-events: none; }
+.cartao-estoque .link-cab.tem { color: var(--aviso); font-weight: 700; }
+.compras-mini { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.compras-mini li { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.compras-mini li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compras-mini li small { color: var(--texto-2); white-space: nowrap; }
+.compras-mini .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--destaque); flex-shrink: 0; }
+.compras-mini .ponto.nivel-baixo { background: var(--aviso); }
+.compras-mini .ponto.nivel-acabou { background: var(--perigo); }
+.vencendo-mini { margin-top: 10px !important; }
