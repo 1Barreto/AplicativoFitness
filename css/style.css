@@ -1543,3 +1543,55 @@ body.com-tela-salvar .sessao-topo-fixa { display: none; }
 .compras-mini .ponto.nivel-baixo { background: var(--aviso); }
 .compras-mini .ponto.nivel-acabou { background: var(--perigo); }
 .vencendo-mini { margin-top: 10px !important; }
+
+/* ==========================================================================
+   Aba Hoje — ajustes para o iPhone (polegar, leitura)
+   ========================================================================== */
+/* Cartões de um número só (Último treino, Esta semana, Peso atual) viram linhas
+   compactas: ícone, rótulo, valor e seta. Ocupam metade da altura de antes. */
+.cartao-linha { display: flex; align-items: center; gap: 14px; padding: 12px 16px; min-height: 64px; }
+.cartao-linha > svg:first-child {
+  width: 40px; height: 40px; padding: 9px; flex: none; border-radius: 12px;
+  background: var(--vidro-forte); color: var(--texto);
+}
+.cartao-linha > svg:last-child { width: 18px; height: 18px; flex: none; color: var(--texto-2); }
+.linha-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; line-height: 1.35; }
+.linha-texto small { font-size: 13px; font-weight: 600; color: var(--texto-2); }
+.linha-texto strong {
+  font-family: var(--fonte-titulo); font-size: 17px; font-weight: 700; letter-spacing: -.02em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;
+}
+.linha-texto span { font-size: 14px; color: var(--texto-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grade-hoje .grade-2 { gap: 12px; }
+/* No celular, Último treino e Esta semana formam uma lista agrupada (estilo iOS) */
+@media (max-width: 699px) {
+  .grade-hoje .grade-2:has(> .cartao-linha) { gap: 0; }
+  .grade-hoje .grade-2 > .cartao-linha:first-child { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .grade-hoje .grade-2 > .cartao-linha:last-child { border-top-left-radius: 0; border-top-right-radius: 0; }
+  .grade-hoje .grade-2 > .cartao-linha + .cartao-linha::before {
+    content: ""; position: absolute; top: 0; left: 70px; right: 0; height: 1px; background: var(--linha);
+  }
+}
+.slot-cartao > .grade-2 > .cartao-linha { height: auto; }
+@media (min-width: 700px) { .slot-cartao > .grade-2 > .cartao-linha { height: 100%; } }
+
+/* Alvos de toque de pelo menos 44 pt, sem aumentar o desenho */
+.icon-btn, .check-ref { position: relative; }
+.icon-btn::after, .check-ref::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+.resumo-gasto { min-height: 44px; }
+
+/* Textos pequenos: piso de 13 px nos cartões da aba Hoje */
+.grade-hoje .proxima-ultima small,
+.grade-hoje .prox-primeiro-info small,
+.grade-hoje .dieta-mini-macros small,
+.grade-hoje .compras-mini li small,
+.grade-hoje .pequeno { font-size: 13px; }
+.grade-hoje .resumo-grade .sobe, .grade-hoje .resumo-grade .desce { font-size: 13px; }
+.grade-hoje .anel-texto small { font-size: 12px; }
+.grade-hoje .tipo-mini { font-size: 12px; padding: 3px 8px; letter-spacing: .02em; }
+@media (max-width: 420px) { .cartao-proxima .hora-pill { font-size: 13px; } }
+
+/* Resumo da semana: título numa linha só, período logo abaixo */
+.cab-titulo { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cartao-resumo .cab-titulo small { margin-left: 0; font-size: 13px; color: var(--texto-2); font-weight: 500; }
+.cartao-resumo .cartao-cab .icon-btn { margin-right: -6px; }

@@ -355,17 +355,21 @@ async function cartaoUltimo(el) {
   const inicioSemana = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; })();
   const daSemana = treinos.filter(x => new Date(x.inicio) >= inicioSemana);
   const volSemana = daSemana.reduce((s, x) => s + resumoTreino(x, mapa).volume, 0);
+  const r = t ? resumoTreino(t, mapa) : null;
   el.innerHTML = `
     <div class="grade-2">
-      <a class="cartao" href="${t ? `#/historico/${t.id}` : '#/historico'}">
-        <div class="cartao-cab">${Icone.historico}<h3>Último treino</h3></div>
-        ${t ? (() => { const r = resumoTreino(t, mapa); return `<p class="destaque-grande">${esc(t.nome)}</p><p class="sutil">${fmtRelativo(t.inicio)} · ${fmtDuracao(r.duracao)} · ${fmtVolume(r.volume)}</p>`; })()
-          : '<p class="sutil">Nenhum treino registrado ainda.</p>'}
+      <a class="cartao cartao-linha" href="${t ? `#/historico/${t.id}` : '#/historico'}">
+        ${Icone.historico}
+        <div class="linha-texto"><small>Último treino</small>
+          ${t ? `<strong>${esc(t.nome)}</strong><span>${fmtRelativo(t.inicio)} · ${fmtDuracao(r.duracao)} · ${fmtVolume(r.volume)}</span>`
+            : '<span>Nenhum treino registrado ainda.</span>'}</div>
+        ${Icone.seta}
       </a>
-      <a class="cartao" href="#/progresso">
-        <div class="cartao-cab">${Icone.progresso}<h3>Esta semana</h3></div>
-        <p class="destaque-grande">${daSemana.length} treino${daSemana.length === 1 ? '' : 's'}</p>
-        <p class="sutil">Volume: ${fmtVolume(volSemana)}</p>
+      <a class="cartao cartao-linha" href="#/progresso">
+        ${Icone.progresso}
+        <div class="linha-texto"><small>Esta semana</small>
+          <strong>${daSemana.length} treino${daSemana.length === 1 ? '' : 's'}</strong><span>Volume: ${fmtVolume(volSemana)}</span></div>
+        ${Icone.seta}
       </a>
     </div>`;
 }

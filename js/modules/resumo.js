@@ -55,7 +55,7 @@ async function cartaoResumo(el) {
   const periodo = `${fmtDiaMes(seg)} a ${fmtDiaMes(somarDias(seg, 6))}`;
   el.innerHTML = `
     <section class="cartao cartao-resumo">
-      <div class="cartao-cab">${Icone.calendario}<h3>Resumo da semana</h3><small class="sutil">${esc(periodo)}</small>
+      <div class="cartao-cab">${Icone.calendario}<div class="cab-titulo"><h3>Resumo da semana</h3><small>${esc(periodo)}</small></div>
         <button class="icon-btn" data-ocultar aria-label="Ocultar até a próxima semana" title="Ocultar até a próxima semana">${Icone.fechar}</button></div>
       <div class="resumo-grade">
         <div><small>Treinos</small><strong>${a.treinos}</strong>${compara(a.treinos, b.treinos)}</div>
