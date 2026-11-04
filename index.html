@@ -9,7 +9,7 @@
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#000000">
-  <script>try { var t = localStorage.getItem('tema'); if (t && t !== 'menta') document.documentElement.dataset.tema = t; } catch (e) {}</script>
+  <script>try { var t = localStorage.getItem('tema'); if (t && t !== 'menta') document.documentElement.dataset.tema = t; var f = localStorage.getItem('fundo'); if (f && f !== 'grafite') { document.documentElement.dataset.fundo = f; var c = { escuro: '#000000', contorno: '#000000', azul: '#05070b', petroleo: '#030706', quente: '#0a0908' }[f]; if (c) document.querySelector('meta[name="theme-color"]').setAttribute('content', c); } } catch (e) {}</script>
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 
   <!-- Apple (tela cheia no iPhone quando adicionado à Tela de Início) -->

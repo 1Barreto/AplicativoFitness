@@ -20,3 +20,26 @@ export function aplicarTema(id) {
   if (id === 'menta') delete document.documentElement.dataset.tema;
   else document.documentElement.dataset.tema = id;
 }
+
+// Fundo e cartões (Ajustes > Aparência). Os tons ficam no CSS, nos blocos
+// [data-fundo]; "grafite" é o padrão (sem atributo).
+export const FUNDOS = [
+  { id: 'grafite', nome: 'Grafite', fundo: '#0b0b0d', cartao: '#1c1c1e' },
+  { id: 'escuro', nome: 'Grafite escuro', fundo: '#000000', cartao: '#111113' },
+  { id: 'contorno', nome: 'Preto com contorno', fundo: '#000000', cartao: '#0a0a0b', contorno: true },
+  { id: 'azul', nome: 'Azul-noite', fundo: '#05070b', cartao: '#0f131b' },
+  { id: 'petroleo', nome: 'Verde-petróleo', fundo: '#030706', cartao: '#0c1513' },
+  { id: 'quente', nome: 'Grafite quente', fundo: '#0a0908', cartao: '#161412' },
+];
+
+export function fundoAtual() {
+  try { return localStorage.getItem('fundo') || 'grafite'; } catch { return 'grafite'; }
+}
+
+export function aplicarFundo(id) {
+  const f = FUNDOS.find(x => x.id === id) || FUNDOS[0];
+  try { localStorage.setItem('fundo', f.id); } catch { /* sem armazenamento */ }
+  if (f.id === 'grafite') delete document.documentElement.dataset.fundo;
+  else document.documentElement.dataset.fundo = f.id;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', f.fundo);
+}

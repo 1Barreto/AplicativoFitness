@@ -1711,7 +1711,7 @@ h1, h2, h3, .topbar-title, .sessao-topo h1, .numero-grande, .destaque-grande, .s
 /* Cartões: só o degrau de cor, sem borda, sombra ou degradê */
 .cartao, .stat, .lista-exercicios, .cartao-destaque, .cartao-proxima, .cartao-parabens { background: var(--cartao); border: 0; box-shadow: none; }
 .stat.ativo { box-shadow: inset 0 0 0 1.5px var(--p); }
-a.cartao:hover { border-color: transparent; background: #232325; }
+a.cartao:hover { border-color: transparent; background: var(--fundo-3); }
 .cartao-futuro { background: transparent; border: 1.5px dashed var(--linha); }
 .modal { background: var(--cartao); border: 0; }
 .rodape-fixo { background: var(--cartao); }
@@ -1737,18 +1737,18 @@ a.cartao:hover { border-color: transparent; background: #232325; }
 /* Campos */
 .campo, .campo-busca { background: var(--fundo-3); border: 1px solid transparent; }
 .campo:focus { background: var(--fundo-3); border-color: rgba(var(--p-rgb), .7); box-shadow: none; }
-.cartao .campo { background: #2c2c2e; }
+.cartao .campo { background: var(--fundo-3); }
 .interruptor { background: var(--vidro-forte); border: 0; }
 
 /* Barras de cima e de abas */
-.topbar { background: rgba(11, 11, 13, .9); border-bottom: .5px solid var(--linha); }
+.topbar { background: color-mix(in srgb, var(--fundo) 90%, transparent); border-bottom: .5px solid var(--linha); }
 .topbar-actions .icon-btn, .sessao-topo .icon-btn { background: var(--fundo-3); border: 0; }
 .estado-sincronizado i { box-shadow: none; }
 .tabbar a.ativa { color: var(--p); background: transparent; box-shadow: none; }
 .tabbar a.ativa svg { filter: none; }
 @media (max-width: 899px) { .tabbar a.ativa { background: transparent; box-shadow: none; } .tabbar a.ativa svg { filter: none; } }
 @media (min-width: 900px) {
-  .tabbar { background: #141416; border: 0; box-shadow: none; }
+  .tabbar { background: var(--cartao); border: 0; box-shadow: none; }
   .tabbar::after { content: none; }
   .tabbar a { border: 0; }
   .tabbar a:hover { background: var(--fundo-3); }
@@ -1779,12 +1779,12 @@ a.cartao:hover { border-color: transparent; background: #232325; }
 .feita .btn-rir { background: transparent; box-shadow: none; }
 .sessao-resumo .resumo-duracao strong { color: var(--texto); text-shadow: none; }
 .recorde-icone { box-shadow: none; }
-.painel-descanso, .barra-treino-link { background: #1c1c1e; border: 0; box-shadow: 0 12px 32px rgba(0, 0, 0, .6); }
+.painel-descanso, .barra-treino-link { background: var(--cartao); border: 0; box-shadow: 0 12px 32px rgba(0, 0, 0, .6); }
 .descanso-tempo strong { text-shadow: none; }
-.sessao-topo { background: rgba(11, 11, 13, .92); border-bottom: .5px solid var(--linha); }
+.sessao-topo { background: color-mix(in srgb, var(--fundo) 92%, transparent); border-bottom: .5px solid var(--linha); }
 
 /* Avisos */
-.toast { background: #2c2c2e; border: 0; }
+.toast { background: var(--fundo-3); border: 0; }
 .toast-sucesso { box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
 .vazio > svg { color: var(--texto-2); }
 
@@ -1820,3 +1820,17 @@ a.cartao:hover { border-color: transparent; background: #232325; }
     grid-template-columns: 30px minmax(58px, 1fr) minmax(56px, 70px) minmax(56px, 70px) 42px 44px;
   }
 }
+
+/* ---------- Fundo e cartões (Ajustes > Aparência) ----------
+   "Grafite" é o padrão do :root acima; cada opção troca só os tons de fundo. */
+[data-fundo="escuro"]   { --fundo: #000000; --cartao: #111113; --fundo-2: #111113; --fundo-3: #1d1d20; --vidro: #1d1d20; --vidro-forte: #2a2a2d; --linha: #26262a; }
+[data-fundo="contorno"] { --fundo: #000000; --cartao: #0a0a0b; --fundo-2: #0a0a0b; --fundo-3: #18181b; --vidro: #18181b; --vidro-forte: #242428; --linha: #222225; }
+[data-fundo="azul"]     { --fundo: #05070b; --cartao: #0f131b; --fundo-2: #0f131b; --fundo-3: #192030; --vidro: #192030; --vidro-forte: #232b3c; --linha: #222a38; }
+[data-fundo="petroleo"] { --fundo: #030706; --cartao: #0c1513; --fundo-2: #0c1513; --fundo-3: #15211e; --vidro: #15211e; --vidro-forte: #1f2e2a; --linha: #1d2a27; }
+[data-fundo="quente"]   { --fundo: #0a0908; --cartao: #161412; --fundo-2: #161412; --fundo-3: #221f1c; --vidro: #221f1c; --vidro-forte: #2e2a26; --linha: #2a2622; }
+[data-fundo="contorno"] :is(.cartao, .stat, .lista-exercicios, .modal, .painel-descanso, .barra-treino-link, .tabbar) { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .09); }
+[data-fundo="contorno"] .stat.ativo { box-shadow: inset 0 0 0 1.5px var(--p); }
+.rotulo-fundos { margin: 16px 0 8px; font-size: 13px; }
+.fundo-amostra { width: 56px; height: 36px; border-radius: 10px; display: flex; align-items: flex-end; justify-content: center; padding: 0 8px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); overflow: hidden; }
+.fundo-amostra i { display: block; width: 100%; height: 22px; border-radius: 6px 6px 0 0; }
+.fundo-amostra.com-contorno i { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25); }

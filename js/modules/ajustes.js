@@ -13,7 +13,7 @@ const exportarBackup = async () => (await import('../core/backup.js')).exportarB
 const importarBackup = async f => (await import('../core/backup.js')).importarBackup(f);
 const importarHevy = async f => (await import('./treino/importar-hevy.js')).importarHevy(f);
 import { escolherDescanso } from './treino/componentes.js';
-import { TEMAS, temaAtual, aplicarTema } from '../core/tema.js';
+import { TEMAS, temaAtual, aplicarTema, FUNDOS, fundoAtual, aplicarFundo } from '../core/tema.js';
 
 const VERSAO_APP = '1.4.0';
 
@@ -34,6 +34,13 @@ async function telaAjustes(el) {
         ${TEMAS.map(t => `
           <button class="tema-opcao ${t.id === temaAtual() ? 'ativo' : ''}" data-tema-id="${t.id}">
             <span class="tema-cores"><i style="background:${t.p}"></i><i style="background:${t.s}"></i></span>${t.nome}
+          </button>`).join('')}
+      </div>
+      <p class="sutil rotulo-fundos">Fundo e cartões</p>
+      <div class="temas" data-fundos>
+        ${FUNDOS.map(f => `
+          <button class="tema-opcao ${f.id === fundoAtual() ? 'ativo' : ''}" data-fundo-id="${f.id}">
+            <span class="fundo-amostra ${f.contorno ? 'com-contorno' : ''}" style="background:${f.fundo}"><i style="background:${f.cartao}"></i></span>${f.nome}
           </button>`).join('')}
       </div>
     </div>
@@ -89,6 +96,11 @@ async function telaAjustes(el) {
     prefs.definirDescansoPadrao(seg);
     el.querySelector('[data-pref=descanso] [data-valor]').textContent = seg ? `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}` : 'Desligado';
     toast('Descanso padrão salvo');
+  };
+  el.querySelector('[data-fundos]').onclick = e => {
+    const b = e.target.closest('[data-fundo-id]'); if (!b) return;
+    aplicarFundo(b.dataset.fundoId);
+    el.querySelectorAll('[data-fundo-id]').forEach(x => x.classList.toggle('ativo', x === b));
   };
   el.querySelector('[data-temas]').onclick = e => {
     const b = e.target.closest('[data-tema-id]'); if (!b) return;
