@@ -1649,3 +1649,23 @@ body.em-treino .exercicio-sessao .btn-bloco { min-height: 44px; }
 /* Textos pequenos: piso de 13 px (12 px nas legendas curtas) */
 .refeicao-itens small, .macros-linha, .macro-topo span { font-size: 13px; }
 .macro-resta, .semana-dia small, .refeicao-kcal small { font-size: 12px; }
+
+/* ==========================================================================
+   Aba Perfil — ajustes para o iPhone (polegar, leitura)
+   ========================================================================== */
+/* Histórico, Progresso e Corpo numa lista agrupada (como na aba Hoje) */
+@media (max-width: 699px) {
+  .perfil-atalhos { gap: 0; }
+  .perfil-atalhos > .atalho { border-radius: 0; position: relative; min-height: 64px; }
+  .perfil-atalhos > .atalho:first-child { border-top-left-radius: var(--raio); border-top-right-radius: var(--raio); }
+  .perfil-atalhos > .atalho:last-child { border-bottom-left-radius: var(--raio); border-bottom-right-radius: var(--raio); }
+  .perfil-atalhos > .atalho + .atalho::before { content: ""; position: absolute; top: 0; left: 64px; right: 0; height: 1px; background: var(--linha); }
+}
+/* Selo dos recordes: com vários tipos, a pílula virava um bloco de 3 linhas */
+.recorde .selo { align-self: flex-start; align-items: flex-start; border-radius: 10px; padding: 5px 9px; line-height: 1.35; font-size: 13px; }
+.recorde .selo svg { flex: none; margin-top: 1px; }
+/* Links "Ver tudo" com área de toque de 44 pt */
+.link-cab { position: relative; }
+.link-cab::after { content: ""; position: absolute; left: -8px; right: -8px; top: 50%; height: 44px; transform: translateY(-50%); }
+/* Textos pequenos */
+.perfil-numeros small, .estatisticas small { font-size: 13px; }
