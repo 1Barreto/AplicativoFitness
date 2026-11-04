@@ -1595,3 +1595,32 @@ body.com-tela-salvar .sessao-topo-fixa { display: none; }
 .cab-titulo { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .cartao-resumo .cab-titulo small { margin-left: 0; font-size: 13px; color: var(--texto-2); font-weight: 500; }
 .cartao-resumo .cartao-cab .icon-btn { margin-right: -6px; }
+
+/* ==========================================================================
+   Aba Treino — ajustes para o iPhone (polegar, leitura)
+   ========================================================================== */
+/* Lista de rotinas: só a próxima sugerida fica com o botão em destaque */
+.rotina-topo { gap: 10px; }
+.rotina-topo .rotina-nome { flex: 1; min-width: 0; padding: 9px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rotina-topo .icon-btn { margin-right: -8px; }
+.rotina-ex { margin-top: 0; }
+.rotina-proxima { border-color: rgba(var(--p-rgb), .3); }
+.selo-proximo {
+  flex: none; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(var(--p-rgb), .14); color: var(--p);
+}
+
+/* Treino em andamento: alvos de toque de 44 pt nas séries (o toque mais repetido do app) */
+body.em-treino .exercicio-sessao .campo-serie { min-height: 44px; }
+body.em-treino .exercicio-sessao .btn-check { width: 44px; height: 44px; border-radius: 10px; }
+body.em-treino .exercicio-sessao .btn-rir { height: 44px; }
+body.em-treino .exercicio-sessao .anterior { min-height: 44px; }
+.tipo-serie, .chip, .btn-pequeno, a.ex-nome { position: relative; }
+.exercicio-sessao .tipo-serie::after, .ex-acoes .chip::after, .sessao-topo .btn-pequeno::after {
+  content: ""; position: absolute; left: 50%; top: 50%; min-width: 100%; width: 44px; height: 44px; transform: translate(-50%, -50%);
+}
+.exercicio-sessao a.ex-nome { padding: 10px 0; }
+.sessao-topo .btn-pequeno { min-height: 40px; }
+/* Descartar longe de "Adicionar exercício", para não tocar sem querer */
+.tela-sessao > .btn.perigo, [data-acao-topo=descartar] { margin-top: 28px; }
+body.em-treino .exercicio-sessao .btn-bloco { min-height: 44px; }
