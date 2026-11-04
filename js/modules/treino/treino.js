@@ -350,6 +350,19 @@ async function primeiroExercicio(rotina) {
     </div>`;
 }
 
+// Seg a dom em círculos: cheio = treinou, contorno = hoje
+function diasDaSemana(treinos) {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const seg = new Date(hoje); seg.setDate(hoje.getDate() - ((hoje.getDay() + 6) % 7));
+  const feitos = new Set(treinos.map(t => { const d = new Date(t.inicio); d.setHours(0, 0, 0, 0); return d.getTime(); }));
+  const letras = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+  return `<div class="semana-dots" aria-hidden="true">${letras.map((l, i) => {
+    const d = new Date(seg); d.setDate(seg.getDate() + i);
+    const cls = [feitos.has(d.getTime()) ? 'ok' : '', d.getTime() === hoje.getTime() ? 'hoje' : ''].join(' ').trim();
+    return `<span class="${cls}">${l}<i></i></span>`;
+  }).join('')}</div>`;
+}
+
 async function cartaoUltimo(el) {
   const [treinos, mapa] = await Promise.all([listarTreinos(), mapaDeExercicios()]);
   const t = treinos[0];
@@ -366,10 +379,11 @@ async function cartaoUltimo(el) {
             : '<span>Nenhum treino registrado ainda.</span>'}</div>
         ${Icone.seta}
       </a>
-      <a class="cartao cartao-linha" href="#/progresso">
+      <a class="cartao cartao-linha cartao-semana" href="#/progresso">
         ${Icone.progresso}
         <div class="linha-texto"><small>Esta semana</small>
           <strong>${daSemana.length} treino${daSemana.length === 1 ? '' : 's'}</strong><span>Volume: ${fmtVolume(volSemana)}</span></div>
+        ${diasDaSemana(daSemana)}
         ${Icone.seta}
       </a>
     </div>`;
@@ -386,7 +400,7 @@ Modulos.registrar({
     '/treino/exercicio/:id': telaExercicio,
   },
   cartoesHoje: [
-    { ordem: 10, render: cartaoProximo },
+    { ordem: 2, render: cartaoProximo },
     { ordem: 20, render: cartaoUltimo },
   ],
 });
