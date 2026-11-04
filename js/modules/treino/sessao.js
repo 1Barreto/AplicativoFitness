@@ -13,6 +13,7 @@ import {
   mapaDeExercicios, ultimasSeries, recordesExercicio, melhoresDeSeries, recordesBatidos, NOMES_RECORDE,
   TIPOS_SERIE, TIPOS_EXERCICIO, descansoDe, salvarTreino, obterRotina, salvarRotina, resumoTreino, prefs,
 } from './dados.js';
+import { publicarTreino } from '../feed/dados.js';
 import { avatarExercicio } from './fotos.js';
 import { escolherExercicios, escolherTipoSerie, rotulosSeries, escolherDescanso, escolherRir, fmtRir } from './componentes.js';
 
@@ -453,6 +454,7 @@ async function finalizarTreino(estado) {
   if (!opcoes) { gravarAtivo(estado); if (marcouAgora) dispatchEvent(new HashChangeEvent('hashchange')); return; }
   if (opcoes === 'descartar') { descartar(); return; }
   const salvo = await salvarTreino(final);
+  publicarTreino(salvo).catch(e => console.warn('Feed: não publicou o treino', e));
 
   if (rotina) {
     if (opcoes.atualizarRotina) {

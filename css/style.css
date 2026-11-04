@@ -1834,3 +1834,49 @@ a.cartao:hover { border-color: transparent; background: var(--fundo-3); }
 .fundo-amostra { width: 56px; height: 36px; border-radius: 10px; display: flex; align-items: flex-end; justify-content: center; padding: 0 8px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); overflow: hidden; }
 .fundo-amostra i { display: block; width: 100%; height: 22px; border-radius: 6px 6px 0 0; }
 .fundo-amostra.com-contorno i { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .25); }
+
+/* ---------- Aba Feed ---------- */
+.feed-lista { display: flex; flex-direction: column; gap: 12px; max-width: 640px; margin: 0 auto; }
+.feed-rodape { display: flex; justify-content: center; padding: 16px 0; }
+.post { display: flex; flex-direction: column; gap: 10px; }
+.post.esqueleto { min-height: 220px; background: linear-gradient(100deg, var(--fundo-2) 30%, var(--fundo-3) 50%, var(--fundo-2) 70%); background-size: 300% 100%; animation: brilho-esqueleto 1.4s linear infinite; }
+@keyframes brilho-esqueleto { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .post.esqueleto { animation: none; } }
+.post-cab { display: flex; align-items: center; gap: 12px; }
+.post-cab .item-texto small { font-size: 13px; }
+.avatar-pessoa { background: rgba(var(--p-rgb), .16); color: var(--destaque); font-size: 17px; }
+.post-corpo { display: flex; flex-direction: column; gap: 8px; color: inherit; text-decoration: none; }
+.post-corpo h3, .post-titulo { margin: 0; font-size: 18px; font-weight: 700; }
+.post-titulo { font-size: 22px; }
+.post-notas { margin: 0; font-size: 15px; color: var(--texto-2); white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.estatisticas .ouro { display: inline-flex; align-items: center; gap: 4px; color: var(--ouro); }
+.estatisticas .ouro svg { width: 16px; height: 16px; }
+.post-ex { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.post-ex li { display: flex; align-items: center; gap: 12px; }
+.post-ex .item-texto strong { font-size: 15px; }
+.avatar-ex.mini { width: 36px; height: 36px; font-size: 14px; }
+.post-mais { font-size: 14px; color: var(--texto-2); }
+.post-acoes { display: flex; gap: 4px; border-top: .5px solid var(--linha); padding-top: 6px; margin-top: 2px; }
+.post-acao {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; min-width: 64px; padding: 0 12px;
+  border: 0; border-radius: 12px; background: none; color: var(--texto-2); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: none;
+}
+.post-acao svg { width: 22px; height: 22px; }
+.post-acao:active { background: var(--fundo-3); }
+.post-acao.ativo { color: #ff4d6d; }
+.post-acao.ativo svg { animation: pulsar-curtida .3s ease-out; }
+@keyframes pulsar-curtida { 50% { transform: scale(1.25); } }
+@media (prefers-reduced-motion: reduce) { .post-acao.ativo svg { animation: none; } }
+.link-curtidas { align-self: flex-start; border: 0; background: none; color: var(--texto-2); font: inherit; font-size: 14px; padding: 4px 0; min-height: 32px; cursor: pointer; }
+.post-ex-nome { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 16px; }
+.feed-nome { display: flex; flex-direction: column; gap: 12px; max-width: 640px; margin: 0 auto 12px; }
+.feed-nome > div:first-child { display: flex; flex-direction: column; gap: 2px; }
+.feed-nome small { font-size: 14px; }
+.feed-nome-linha { display: flex; gap: 8px; }
+.feed-nome-linha .campo { flex: 1; min-width: 0; }
+.comentario { align-items: flex-start; }
+.comentario .item-texto strong small { font-weight: 500; font-size: 13px; }
+.comentario-texto { font-size: 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.comentario-vazio { padding: 14px 16px; margin: 0; font-size: 14px; }
+.comentar { display: flex; gap: 8px; margin: 12px 0 8px; }
+.comentar .campo { flex: 1; min-width: 0; }

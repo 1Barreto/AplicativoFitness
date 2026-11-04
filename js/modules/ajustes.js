@@ -5,7 +5,7 @@ import { Auth } from '../core/auth.js';
 import { Sync } from '../core/sync.js';
 import { DB } from '../core/db.js';
 import { Bus, esc, fmtDataHora } from '../core/util.js';
-import { Icone, definirTitulo, toast, confirmar, folha } from '../core/ui.js';
+import { Icone, definirTitulo, toast, confirmar, folha, pedirTexto } from '../core/ui.js';
 import { som } from '../core/som.js';
 import { prefs } from './treino/dados.js';
 // Backup e importação do Hevy só são baixados quando usados
@@ -13,6 +13,7 @@ const exportarBackup = async () => (await import('../core/backup.js')).exportarB
 const importarBackup = async f => (await import('../core/backup.js')).importarBackup(f);
 const importarHevy = async f => (await import('./treino/importar-hevy.js')).importarHevy(f);
 import { escolherDescanso } from './treino/componentes.js';
+import { meuPerfil, salvarNome, publicarAtivo, definirPublicar } from './feed/dados.js';
 import { TEMAS, temaAtual, aplicarTema, FUNDOS, fundoAtual, aplicarFundo } from '../core/tema.js';
 
 const VERSAO_APP = '1.4.0';
@@ -59,6 +60,18 @@ async function telaAjustes(el) {
       <label class="linha-lista">
         <span class="item-texto"><strong>Manter tela ligada no treino</strong><small>Evita que a tela bloqueie durante o treino (iOS 16.4+)</small></span>
         <input type="checkbox" class="interruptor" data-pref="tela" ${prefs.manterTelaLigada() ? 'checked' : ''}>
+      </label>
+    </div>
+
+    <h2 class="secao">Feed</h2>
+    <div class="cartao lista-simples">
+      <button class="linha-lista" data-acao="nome-feed">
+        <span class="item-texto"><strong>Seu nome no feed</strong><small>${usuario ? 'O que seus amigos veem nos seus treinos' : 'Entre na sua conta para usar o feed'}</small></span>
+        <span class="sutil" data-nome-feed>${usuario ? '…' : ''}</span>
+      </button>
+      <label class="linha-lista">
+        <span class="item-texto"><strong>Publicar meus treinos</strong><small>Ao finalizar, o treino aparece no feed de quem usa o app</small></span>
+        <input type="checkbox" class="interruptor" data-pref="feed" ${publicarAtivo() ? 'checked' : ''}>
       </label>
     </div>
 
@@ -109,6 +122,17 @@ async function telaAjustes(el) {
   };
   el.querySelector('[data-pref=som]').onchange = e => som.definirAtivo(e.target.checked);
   el.querySelector('[data-pref=tela]').onchange = e => prefs.definirManterTelaLigada(e.target.checked);
+  el.querySelector('[data-pref=feed]').onchange = e => definirPublicar(e.target.checked);
+  const nomeFeed = el.querySelector('[data-nome-feed]');
+  if (usuario) meuPerfil().then(p => { nomeFeed.textContent = p?.nome || 'Definir'; });
+  el.querySelector('[data-acao=nome-feed]').onclick = async () => {
+    if (!Auth.usuario()) { toast('Entre na sua conta primeiro'); return; }
+    const nome = await pedirTexto('Seu nome no feed', (await meuPerfil())?.nome || '', { placeholder: 'Como seus amigos vão te ver' });
+    if (!nome) return;
+    await salvarNome(nome);
+    nomeFeed.textContent = nome;
+    toast('Nome salvo', 'sucesso');
+  };
   el.querySelector('[data-acao=testar-som]').onclick = () => { som.desbloquear(); const a = som.ativo(); som.definirAtivo(true); som.fimDescanso(); som.definirAtivo(a); };
   el.querySelector('[data-acao=exportar]').onclick = async () => { try { await exportarBackup(); } catch (e) { toast(e.message, 'erro'); } };
   el.querySelector('[data-acao=importar]').onchange = async e => {
