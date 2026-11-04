@@ -123,10 +123,12 @@ async function telaCorpo(el, _p, query) {
 async function cartaoPeso(el) {
   const p = await pesoAtual();
   el.innerHTML = `
-    <a class="cartao" href="#/corpo">
-      <div class="cartao-cab">${Icone.balanca}<h3>Peso atual</h3></div>
-      ${p ? `<p class="destaque-grande">${fmtNum(p.valor)} kg</p><p class="sutil">Registrado ${fmtRelativo(p.data)}</p>`
-        : '<p class="sutil">Toque para registrar seu peso.</p>'}
+    <a class="cartao cartao-linha" href="#/corpo">
+      ${Icone.balanca}
+      <div class="linha-texto"><small>Peso atual</small>
+        ${p ? `<strong>${fmtNum(p.valor)} kg</strong><span>Registrado ${fmtRelativo(p.data)}</span>`
+          : '<span>Toque para registrar seu peso.</span>'}</div>
+      ${Icone.seta}
     </a>`;
 }
 
