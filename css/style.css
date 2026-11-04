@@ -1669,3 +1669,14 @@ body.em-treino .exercicio-sessao .btn-bloco { min-height: 44px; }
 .link-cab::after { content: ""; position: absolute; left: -8px; right: -8px; top: 50%; height: 44px; transform: translateY(-50%); }
 /* Textos pequenos */
 .perfil-numeros small, .estatisticas small { font-size: 13px; }
+
+/* ==========================================================================
+   Ajustes — ajustes para o iPhone
+   ========================================================================== */
+/* Botões de backup: no celular, um embaixo do outro (o texto quebrava em 2 linhas) */
+@media (max-width: 480px) {
+  .linha-botoes:has([data-acao=exportar]) { display: grid; grid-template-columns: 1fr; }
+  .linha-botoes:has([data-acao=exportar]) .btn { min-height: 48px; }
+}
+/* Ação que apaga dados fica em vermelho, para não parecer uma opção comum */
+.linha-lista.perigo strong, .linha-lista.perigo > svg { color: var(--perigo); }
