@@ -1880,3 +1880,16 @@ a.cartao:hover { border-color: transparent; background: var(--fundo-3); }
 .comentario-vazio { padding: 14px 16px; margin: 0; font-size: 14px; }
 .comentar { display: flex; gap: 8px; margin: 12px 0 8px; }
 .comentar .campo { flex: 1; min-width: 0; }
+/* Feed: Treinos | Refeições */
+.feed-abas { max-width: 640px; width: 100%; margin: 0 auto 12px; }
+.feed-lista, .feed-nome { width: 100%; }
+.feed-abas button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.post-refeicao h3 { display: flex; align-items: center; gap: 8px; }
+.post-refeicao h3 svg { width: 20px; height: 20px; color: var(--destaque); flex-shrink: 0; }
+.post-refeicao h3 small { font-weight: 500; font-size: 15px; }
+.post-itens { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; }
+.post-itens li { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: .5px solid var(--linha); }
+.post-itens li:last-child { border-bottom: 0; }
+.post-itens .item-texto strong { font-size: 15px; font-weight: 500; }
+.post-itens li > .sutil { font-size: 14px; white-space: nowrap; }
+.post-itens.completa { margin: 0; }

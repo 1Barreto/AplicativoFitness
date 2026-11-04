@@ -9,8 +9,9 @@
 
 import { DB } from '../../core/db.js';
 import { Auth } from '../../core/auth.js';
-import { Bus } from '../../core/util.js';
+import { Bus, debounce, agoraISO } from '../../core/util.js';
 import { obterTreino, mapaDeExercicios, mapaDeRecordes, resumoTreino } from '../treino/dados.js';
+import { T as TD, obterConfig, refeicaoFeita, somar, fmtQtd, calcular, hojeISO, somarDias } from '../dieta/dados.js';
 
 export const TF = { PERFIS: 'perfis', FEED: 'feed' };
 const POR_PAGINA = 15;
@@ -18,6 +19,8 @@ const POR_PAGINA = 15;
 // ---------- Preferência: publicar meus treinos ----------
 export const publicarAtivo = () => localStorage.getItem('feedPublicar') !== '0';
 export const definirPublicar = v => localStorage.setItem('feedPublicar', v ? '1' : '0');
+export const publicarRefeicoesAtivo = () => localStorage.getItem('feedRefeicoes') !== '0';
+export const definirPublicarRefeicoes = v => localStorage.setItem('feedRefeicoes', v ? '1' : '0');
 
 // ---------- Erros ----------
 const tabelaAusente = e => !!e && (e.code === 'PGRST205' || e.code === '42P01' || /could not find the table|does not exist/i.test(e.message || ''));
@@ -101,6 +104,49 @@ Bus.on('dados:alterados', async ({ tabela, id, local }) => {
   } catch (e) { console.warn('Feed: não foi possível atualizar a publicação', e); }
 });
 
+// ---------- Publicar refeições ----------
+// Quando todos os itens de uma refeição (de hoje ou ontem) ficam feitos, ela
+// vai para o feed; se desmarcar ou esvaziar, sai. Editar uma refeição já
+// publicada atualiza a publicação. Uma removida à mão ("Remover do feed")
+// não volta sozinha.
+const chaveRef = (dia, ref) => `${dia}|${ref}`;
+const tocadas = new Set();
+const processarRefeicoes = debounce(async () => {
+  const chaves = [...tocadas]; tocadas.clear();
+  try {
+    const [itens, posts, config] = await Promise.all([DB.todos(TD.diario), DB.todos(TF.FEED, { incluirExcluidos: true }), obterConfig()]);
+    for (const k of chaves) {
+      const [dia, ref] = k.split('|');
+      const lista = itens.filter(i => i.dia === dia && i.refeicao === ref).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+      const atual = posts.find(p => p.tipo === 'refeicao' && p.dia === dia && p.refeicao === ref);
+      const feita = refeicaoFeita(lista);
+      if (!feita) {
+        if (atual && !atual.deleted) await DB.salvar(TF.FEED, { ...atual, deleted: true, auto: true });
+        continue;
+      }
+      if (atual?.deleted && !atual.auto) continue;            // removida pela pessoa
+      if (!atual && (!publicarRefeicoesAtivo() || dia < somarDias(hojeISO(), -1))) continue;
+      const r = config.refeicoes.find(x => x.id === ref);
+      const t = somar(lista);
+      await DB.salvar(TF.FEED, {
+        ...(atual || {}), deleted: false, auto: false,
+        tipo: 'refeicao', dia, refeicao: ref, nome: r?.nome || 'Refeição',
+        fim: atual?.fim || agoraISO(),
+        kcal: t.kcal, p: t.p, c: t.c, g: t.g,
+        itens: lista.map(i => ({ nome: i.alimento?.nome || 'Alimento', marca: i.alimento?.marca || '', qtd: fmtQtd(i), kcal: Math.round(calcular(i.alimento?.n, i.gramas).kcal) })),
+      });
+    }
+  } catch (e) { console.warn('Feed: não foi possível atualizar a refeição', e); }
+}, 1500);
+
+Bus.on('dados:alterados', async ({ tabela, id, local }) => {
+  if (tabela !== TD.diario || !id || !local) return;
+  const item = (await DB.todos(TD.diario, { incluirExcluidos: true })).find(i => i.id === id);
+  if (!item?.dia || !item.refeicao) return;
+  tocadas.add(chaveRef(item.dia, item.refeicao));
+  processarRefeicoes();
+});
+
 // ---------- Ler o feed ----------
 const paraPost = l => ({ ...(l.data || {}), id: l.id, autor: l.user_id });
 
@@ -127,11 +173,12 @@ async function completar(c, u, posts) {
   return posts;
 }
 
-export async function listarFeed({ pagina = 0 } = {}) {
+// tipo: 'treino' (publicações sem tipo, as primeiras) ou 'refeicao'
+export async function listarFeed({ pagina = 0, tipo = 'treino' } = {}) {
   const { c, u } = cliente();
-  const { data, error } = await c.from(TF.FEED)
-    .select('id, user_id, data')
-    .eq('deleted', false)
+  let q = c.from(TF.FEED).select('id, user_id, data').eq('deleted', false);
+  q = tipo === 'refeicao' ? q.eq('data->>tipo', 'refeicao') : q.is('data->>tipo', null);
+  const { data, error } = await q
     .order('data->>fim', { ascending: false })
     .range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA - 1);
   verificar(error);

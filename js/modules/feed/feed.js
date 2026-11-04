@@ -63,8 +63,44 @@ function cabecalho(p) {
   </header>`;
 }
 
+// ---------- Refeições ----------
+const fmt0 = v => fmtNum(Math.round(v || 0));
+const fmt1 = v => fmtNum(Math.round((v || 0) * 10) / 10);
+function macros(p) {
+  return `<div class="estatisticas mini">
+    <div><small>Calorias</small><strong>${fmt0(p.kcal)} kcal</strong></div>
+    <div><small>Proteína</small><strong>${fmt1(p.p)} g</strong></div>
+    <div><small>Carbo</small><strong>${fmt1(p.c)} g</strong></div>
+    <div><small>Gordura</small><strong>${fmt1(p.g)} g</strong></div>
+  </div>`;
+}
+const linhaItem = i => `<li><span class="item-texto"><strong>${esc(i.nome)}</strong><small>${esc([i.marca, i.qtd].filter(Boolean).join(' · '))}</small></span><span class="sutil">${fmt0(i.kcal)} kcal</span></li>`;
+// "Almoço" em outro dia mostra também o dia (ex.: "Almoço · ontem")
+function tituloRefeicao(p) {
+  const hoje = new Date().toLocaleDateString('sv-SE');
+  if (!p.dia || p.dia === hoje) return esc(p.nome);
+  const d = new Date(`${p.dia}T12:00:00`);
+  const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+  return `${esc(p.nome)} <small class="sutil">· ${p.dia === ontem.toLocaleDateString('sv-SE') ? 'ontem' : fmtData(d.toISOString(), { day: 'numeric', month: 'short' })}</small>`;
+}
+const MAX_ITENS = 4;
+function cartaoRefeicao(p) {
+  const itens = p.itens || [];
+  return `<article class="cartao post post-refeicao" data-post="${p.id}">
+    ${cabecalho(p)}
+    <a class="post-corpo" href="#/feed/${p.id}">
+      <h3>${Icone.dieta}${tituloRefeicao(p)}</h3>
+      ${macros(p)}
+      <ul class="post-itens">${itens.slice(0, MAX_ITENS).map(linhaItem).join('')}</ul>
+      ${itens.length > MAX_ITENS ? `<span class="post-mais">Ver mais ${itens.length - MAX_ITENS} alimento${itens.length - MAX_ITENS > 1 ? 's' : ''}</span>` : ''}
+    </a>
+    ${botoesAcao(p)}
+  </article>`;
+}
+
 const MAX_EX = 3;
 function cartaoPost(p) {
+  if (p.tipo === 'refeicao') return cartaoRefeicao(p);
   const ex = p.exercicios || [];
   return `<article class="cartao post" data-post="${p.id}">
     ${cabecalho(p)}
@@ -104,12 +140,13 @@ function ligarAcoes(el, posts, { aoRemover } = {}) {
     if (bm) {
       ev.preventDefault();
       const p = posts.get(bm.dataset.menuPost); if (!p) return;
+      const refeicao = p.tipo === 'refeicao';
       const op = await menu(p.nome, [
-        { texto: 'Ver no meu histórico', valor: 'hist', icone: Icone.historico },
+        refeicao ? { texto: 'Ver na dieta', valor: 'ver', icone: Icone.dieta } : { texto: 'Ver no meu histórico', valor: 'ver', icone: Icone.historico },
         { texto: 'Remover do feed', valor: 'remover', icone: Icone.lixo, perigo: true },
       ]);
-      if (op === 'hist') location.hash = `#/historico/${p.id}`;
-      else if (op === 'remover' && await confirmar('Remover este treino do feed? Ele continua no seu histórico.', { ok: 'Remover', perigo: true })) {
+      if (op === 'ver') location.hash = refeicao ? `#/dieta?dia=${p.dia}` : `#/historico/${p.id}`;
+      else if (op === 'remover' && await confirmar(refeicao ? 'Remover esta refeição do feed? Ela continua na sua dieta.' : 'Remover este treino do feed? Ele continua no seu histórico.', { ok: 'Remover', perigo: true })) {
         await removerPublicacao(p.id);
         toast('Removido do feed');
         aoRemover?.(p);
@@ -130,7 +167,15 @@ function telaErro(el, e) {
 // ---------- Lista ----------
 // A última lista carregada fica na memória: ao voltar para a aba ela aparece
 // na hora e é atualizada em seguida.
-let cache = null; // { posts, temMais, pagina }
+const caches = {}; // tipo -> { posts, temMais, pagina }
+const limparCache = () => { delete caches.treino; delete caches.refeicao; };
+const ABAS = { treino: 'Treinos', refeicao: 'Refeições' };
+const abaSalva = () => { try { return ABAS[localStorage.getItem('feedAba')] ? localStorage.getItem('feedAba') : 'treino'; } catch { return 'treino'; } };
+const VAZIO = {
+  treino: ['Nenhum treino ainda', 'Quando você ou seus amigos concluírem um treino, ele aparece aqui.', '<a class="btn btn-primario" href="#/treino">Começar treino</a>'],
+  refeicao: ['Nenhuma refeição ainda', 'Quando você ou seus amigos marcarem uma refeição como feita, ela aparece aqui.', '<a class="btn btn-primario" href="#/dieta">Ir para Dieta</a>'],
+};
+const ESQUELETO = '<div class="cartao post esqueleto"></div><div class="cartao post esqueleto"></div>';
 
 async function telaFeed(el) {
   definirTitulo('Feed');
@@ -139,57 +184,77 @@ async function telaFeed(el) {
     // O login termina de carregar depois da primeira tela: redesenha quando entrar
     return Bus.on('auth:mudou', s => { if (s) dispatchEvent(new HashChangeEvent('hashchange')); });
   }
+  let tipo = abaSalva();
   el.innerHTML = `
+    <div class="segmento feed-abas" role="tablist" data-abas>
+      ${Object.entries(ABAS).map(([t, nome]) => `<button role="tab" data-aba="${t}" class="${t === tipo ? 'ativo' : ''}" aria-selected="${t === tipo}">${t === 'treino' ? Icone.treino : Icone.dieta}${nome}</button>`).join('')}
+    </div>
     <div data-perfil></div>
-    <div class="feed-lista" data-lista>${cache ? '' : '<div class="cartao post esqueleto"></div><div class="cartao post esqueleto"></div>'}</div>
+    <div class="feed-lista" data-lista>${caches[tipo] ? '' : ESQUELETO}</div>
     <div class="feed-rodape" data-rodape></div>`;
   const lista = el.querySelector('[data-lista]');
   const rodape = el.querySelector('[data-rodape]');
   const posts = new Map();
-  let estado = cache ? { ...cache } : null;
+  let estado = caches[tipo] ? { ...caches[tipo] } : null;
   let parado = false;
+  const guardar = () => { caches[tipo] = { ...estado }; };
 
   const desenhar = () => {
     posts.clear();
     estado.posts.forEach(p => posts.set(p.id, p));
-    lista.innerHTML = estado.posts.length ? estado.posts.map(cartaoPost).join('')
-      : vazio(Icone.feed, 'Nada por aqui ainda', 'Quando você ou seus amigos concluírem um treino, ele aparece aqui.', '<a class="btn btn-primario" href="#/treino">Começar treino</a>');
+    lista.innerHTML = estado.posts.length ? estado.posts.map(cartaoPost).join('') : vazio(tipo === 'treino' ? Icone.treino : Icone.dieta, ...VAZIO[tipo]);
     rodape.innerHTML = estado.temMais ? '<button class="btn btn-secundario" data-mais>Carregar mais</button>' : '';
   };
-  ligarAcoes(lista, posts, { aoRemover: p => { estado.posts = estado.posts.filter(x => x.id !== p.id); cache = { ...estado }; desenhar(); } });
+  ligarAcoes(lista, posts, { aoRemover: p => { estado.posts = estado.posts.filter(x => x.id !== p.id); guardar(); desenhar(); } });
   rodape.addEventListener('click', async ev => {
     const b = ev.target.closest('[data-mais]'); if (!b) return;
     b.disabled = true; b.textContent = 'Carregando…';
+    const t = tipo;
     try {
-      const r = await listarFeed({ pagina: estado.pagina + 1 });
+      const r = await listarFeed({ pagina: estado.pagina + 1, tipo: t });
+      if (t !== tipo) return;
       const ja = new Set(estado.posts.map(p => p.id));
       estado = { posts: [...estado.posts, ...r.posts.filter(p => !ja.has(p.id))], temMais: r.temMais, pagina: estado.pagina + 1 };
-      cache = { ...estado };
+      guardar();
       desenhar();
     } catch (e) { toast(e.message, 'erro'); b.disabled = false; b.textContent = 'Carregar mais'; }
   });
 
   if (estado) desenhar();
   desenharPerfil(el.querySelector('[data-perfil]'), nome => {
+    limparCache();
     if (!estado) return;
     estado.posts.forEach(p => { if (p.meu) p.autorNome = nome; });
-    cache = { ...estado };
+    guardar();
     desenhar();
   });
 
   const atualizar = async () => {
+    const t = tipo;
     try {
-      const r = await listarFeed();
-      if (parado) return;
+      const r = await listarFeed({ tipo: t });
+      if (parado || t !== tipo) return;
       estado = { ...r, pagina: 0 };
-      cache = { ...estado };
+      guardar();
       desenhar();
     } catch (e) {
-      if (parado) return;
+      if (parado || t !== tipo) return;
       if (estado) { if (!(e instanceof FeedIndisponivel)) toast(e.message, 'erro'); }
       else telaErro(lista, e);
     }
   };
+
+  // Treinos | Refeições
+  el.querySelector('[data-abas]').addEventListener('click', ev => {
+    const b = ev.target.closest('[data-aba]'); if (!b || b.dataset.aba === tipo) return;
+    tipo = b.dataset.aba;
+    try { localStorage.setItem('feedAba', tipo); } catch { /* sem armazenamento */ }
+    el.querySelectorAll('[data-aba]').forEach(x => { const a = x === b; x.classList.toggle('ativo', a); x.setAttribute('aria-selected', a); });
+    estado = caches[tipo] ? { ...caches[tipo] } : null;
+    if (estado) desenhar(); else { posts.clear(); lista.innerHTML = ESQUELETO; rodape.innerHTML = ''; }
+    atualizar();
+  });
+
   if (estado) atualizar(); else await atualizar();
 
   // Volta para o app ou termina de enviar um treino: busca o que há de novo
@@ -200,7 +265,7 @@ async function telaFeed(el) {
 }
 // Treino recém-publicado: atualiza a lista quando ele chegar ao servidor
 let pendenteEnvio = false;
-Bus.on('dados:alterados', ({ tabela, local }) => { if (tabela === TF.FEED && local) { pendenteEnvio = true; cache = null; } });
+Bus.on('dados:alterados', ({ tabela, local }) => { if (tabela === TF.FEED && local) { pendenteEnvio = true; limparCache(); } });
 
 // Pede o nome na primeira vez (é o que os amigos veem no feed)
 async function desenharPerfil(area, aoSalvar) {
@@ -208,7 +273,7 @@ async function desenharPerfil(area, aoSalvar) {
   if (perfil?.nome) { area.innerHTML = ''; return; }
   area.innerHTML = `
     <form class="cartao feed-nome">
-      <div><strong>Como seus amigos vão te ver?</strong><small class="sutil">Esse nome aparece nos seus treinos do feed.</small></div>
+      <div><strong>Como seus amigos vão te ver?</strong><small class="sutil">Esse nome aparece nos seus treinos e refeições do feed.</small></div>
       <div class="feed-nome-linha">
         <input class="campo" name="nome" maxlength="40" autocomplete="name" placeholder="Seu nome" required>
         <button class="btn btn-primario">Salvar</button>
@@ -235,20 +300,23 @@ async function telaPost(el, { id }, query) {
   el.innerHTML = '<div class="cartao post esqueleto"></div>';
   let p;
   try { p = await obterPost(id); } catch (e) { telaErro(el, e); return; }
-  if (!p) { el.innerHTML = vazio(Icone.feed, 'Treino não encontrado', 'Ele pode ter sido removido do feed.'); return; }
+  if (!p) { el.innerHTML = vazio(Icone.feed, 'Publicação não encontrada', 'Ela pode ter sido removida do feed.'); return; }
+  const refeicao = p.tipo === 'refeicao';
+  if (refeicao) definirTitulo('Refeição', { voltar: '#/feed' });
 
   const posts = new Map([[p.id, p]]);
   el.innerHTML = `
     <article class="cartao post" data-post="${p.id}">
       ${cabecalho(p)}
       <h2 class="post-titulo">${esc(p.nome)}</h2>
-      <p class="sutil">${fmtData(p.fim, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <p class="sutil">${fmtData(refeicao && p.dia ? `${p.dia}T12:00:00` : p.fim, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       ${p.notas ? `<p class="notas">${esc(p.notas)}</p>` : ''}
-      ${estatisticas(p)}
+      ${refeicao ? macros(p) : estatisticas(p)}
       ${botoesAcao(p)}
       <button class="link-curtidas" data-curtidas ${p.curtidas ? '' : 'hidden'}>Ver quem curtiu</button>
     </article>
-    ${(p.exercicios || []).map(e => {
+    ${refeicao ? `<section class="cartao"><ul class="post-itens completa">${(p.itens || []).map(linhaItem).join('')}</ul></section>` : ''}
+    ${(refeicao ? [] : p.exercicios || []).map(e => {
       const [c1, c2] = TIPOS_EXERCICIO[e.tipo || 'peso_reps']?.campos || ['kg', 'reps'];
       const rot = rotulosSeries(e.series);
       return `<section class="cartao">
@@ -303,7 +371,7 @@ async function telaPost(el, { id }, query) {
     if (n === null) return;
     p.comentarios = n;
     const span = el.querySelector('.post-acoes a span'); if (span) span.textContent = n || '';
-    cache = null;
+    limparCache();
   };
 
   const form = el.querySelector('[data-comentar]');
