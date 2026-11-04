@@ -13,7 +13,7 @@ const exportarBackup = async () => (await import('../core/backup.js')).exportarB
 const importarBackup = async f => (await import('../core/backup.js')).importarBackup(f);
 const importarHevy = async f => (await import('./treino/importar-hevy.js')).importarHevy(f);
 import { escolherDescanso } from './treino/componentes.js';
-import { meuPerfil, salvarNome, publicarAtivo, definirPublicar } from './feed/dados.js';
+import { meuPerfil, salvarNome, publicarAtivo, definirPublicar, publicarRefeicoesAtivo, definirPublicarRefeicoes } from './feed/dados.js';
 import { TEMAS, temaAtual, aplicarTema, FUNDOS, fundoAtual, aplicarFundo } from '../core/tema.js';
 
 const VERSAO_APP = '1.4.0';
@@ -73,6 +73,10 @@ async function telaAjustes(el) {
         <span class="item-texto"><strong>Publicar meus treinos</strong><small>Ao finalizar, o treino aparece no feed de quem usa o app</small></span>
         <input type="checkbox" class="interruptor" data-pref="feed" ${publicarAtivo() ? 'checked' : ''}>
       </label>
+      <label class="linha-lista">
+        <span class="item-texto"><strong>Publicar minhas refeições</strong><small>Quando uma refeição fica toda feita, ela aparece no feed</small></span>
+        <input type="checkbox" class="interruptor" data-pref="feed-refeicoes" ${publicarRefeicoesAtivo() ? 'checked' : ''}>
+      </label>
     </div>
 
     <h2 class="secao">Backup</h2>
@@ -123,6 +127,7 @@ async function telaAjustes(el) {
   el.querySelector('[data-pref=som]').onchange = e => som.definirAtivo(e.target.checked);
   el.querySelector('[data-pref=tela]').onchange = e => prefs.definirManterTelaLigada(e.target.checked);
   el.querySelector('[data-pref=feed]').onchange = e => definirPublicar(e.target.checked);
+  el.querySelector('[data-pref=feed-refeicoes]').onchange = e => definirPublicarRefeicoes(e.target.checked);
   const nomeFeed = el.querySelector('[data-nome-feed]');
   if (usuario) meuPerfil().then(p => { nomeFeed.textContent = p?.nome || 'Definir'; });
   el.querySelector('[data-acao=nome-feed]').onclick = async () => {
