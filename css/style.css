@@ -1624,3 +1624,28 @@ body.em-treino .exercicio-sessao .anterior { min-height: 44px; }
 /* Descartar longe de "Adicionar exercício", para não tocar sem querer */
 .tela-sessao > .btn.perigo, [data-acao-topo=descartar] { margin-top: 28px; }
 body.em-treino .exercicio-sessao .btn-bloco { min-height: 44px; }
+
+/* ==========================================================================
+   Aba Dieta — ajustes para o iPhone (polegar, leitura)
+   ========================================================================== */
+/* Atalhos numa faixa só, que desliza para o lado: as refeições sobem na tela.
+   As ações do dia (aplicar plano, copiar dia) vêm primeiro e em destaque. */
+.dieta-atalhos .chip-acao { background: rgba(var(--p-rgb), .1); border-color: rgba(var(--p-rgb), .35); color: var(--p); }
+@media (max-width: 699px) {
+  .dieta-atalhos {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain;
+    margin-left: -16px; margin-right: -16px; padding: 2px 16px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent);
+  }
+  .dieta-atalhos::-webkit-scrollbar { display: none; }
+  .dieta-atalhos .chip { flex: none; white-space: nowrap; min-height: 40px; }
+}
+/* Alvos de toque de 44 pt */
+.segmento button { min-height: 44px; }
+.btn-add-alimento { min-height: 44px; }
+.resumo-numeros .linha-meta { position: relative; }
+.resumo-numeros .linha-meta::after { content: ""; position: absolute; left: 0; right: 0; top: -8px; bottom: -6px; }
+/* Textos pequenos: piso de 13 px (12 px nas legendas curtas) */
+.refeicao-itens small, .macros-linha, .macro-topo span { font-size: 13px; }
+.macro-resta, .semana-dia small, .refeicao-kcal small { font-size: 12px; }
