@@ -15,26 +15,27 @@ import { avatarExercicio, fotoDe, escolherFoto } from './fotos.js';
 // ---------- Lista de rotinas ----------
 async function telaTreino(el) {
   definirTitulo('Treino');
-  const [rotinas, mapa] = await Promise.all([listarRotinas(), mapaDeExercicios()]);
+  const [rotinas, mapa, prox] = await Promise.all([listarRotinas(), mapaDeExercicios(), proximaRotina()]);
   const ativo = obterAtivo();
 
   el.innerHTML = `
     ${ativo ? `<a class="cartao cartao-destaque" href="#/treino/ativo">${Icone.play}<div><strong>Continuar treino</strong><small>${esc(ativo.nome)}</small></div></a>` : ''}
     <div class="grade-botoes">
-      <button class="btn btn-primario" data-acao="vazio">${Icone.play}<span>Treino vazio</span></button>
+      <button class="btn ${rotinas.length ? 'btn-secundario' : 'btn-primario'}" data-acao="vazio">${Icone.play}<span>Treino vazio</span></button>
       <a class="btn btn-secundario" href="#/treino/rotina/nova">${Icone.mais}<span>Nova rotina</span></a>
       <a class="btn btn-secundario" href="#/treino/exercicios">${Icone.busca}<span>Exercícios</span></a>
     </div>
     <h2 class="secao">Minhas rotinas <small>${rotinas.length}</small></h2>
     <div class="grade-cartoes">
       ${rotinas.length ? rotinas.map(r => `
-        <article class="cartao rotina" data-id="${r.id}">
+        <article class="cartao rotina ${r.id === prox?.id ? 'rotina-proxima' : ''}" data-id="${r.id}">
           <div class="rotina-topo">
             <a href="#/treino/rotina/${r.id}" class="rotina-nome">${esc(r.nome)}</a>
+            ${r.id === prox?.id ? '<span class="selo-proximo">Próximo</span>' : ''}
             <button class="icon-btn" data-acao="menu" aria-label="Opções">${Icone.pontos}</button>
           </div>
           <p class="sutil rotina-ex">${(r.exercicios || []).map(e => esc(mapa.get(e.exercicio_id)?.nome || '?')).join(', ') || 'Sem exercícios'}</p>
-          <button class="btn btn-primario btn-bloco" data-acao="iniciar">${Icone.play}<span>Iniciar</span></button>
+          <button class="btn ${r.id === prox?.id ? 'btn-primario' : 'btn-secundario'} btn-bloco" data-acao="iniciar">${Icone.play}<span>Iniciar</span></button>
         </article>`).join('') : vazio(Icone.treino, 'Nenhuma rotina ainda', 'Crie rotinas como "Treino A", "Treino B"… para começar mais rápido.', '<a class="btn btn-primario" href="#/treino/rotina/nova">Criar rotina</a>')}
     </div>`;
 
