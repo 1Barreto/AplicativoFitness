@@ -15,5 +15,6 @@ import './dieta/gasto.js';
 import './estoque/estoque.js';
 import './resumo.js';
 import './corpo/corpo.js';
+import './feed/feed.js';
 import './perfil/perfil.js';
 import './ajustes.js';

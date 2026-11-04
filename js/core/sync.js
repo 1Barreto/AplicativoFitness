@@ -75,6 +75,7 @@ async function baixarTabela(cliente, userId, tabela) {
   for (;;) {
     const { data, error } = await cliente.from(tabela)
       .select('id, updated_at, deleted, data, server_updated_at')
+      .eq('user_id', userId) // tabelas do feed deixam ler os dados dos outros: baixa só os seus
       .gte('server_updated_at', inicio)
       .order('server_updated_at', { ascending: true })
       .range(pagina * 1000, pagina * 1000 + 999);
