@@ -4,7 +4,7 @@
 
 import { Modulos } from '../../core/modulos.js';
 import { Auth } from '../../core/auth.js';
-import { esc, fmtNum, fmtVolume, fmtDuracao, fmtDataHora, fmtRelativo, inicioDaSemana, inicioDoDia, dataInput } from '../../core/util.js';
+import { esc, fmtNum, fmtVolume, fmtDuracao, fmtDataHora, fmtRelativo, inicioDaSemana, inicioDoDia, dataInput, fmtLocal } from '../../core/util.js';
 import { Icone, definirTitulo, vazio } from '../../core/ui.js';
 import { criarGrafico } from '../../core/graficos.js';
 import { listarTreinos, mapaDeExercicios, resumoTreino, mapaDeRecordes, NOMES_RECORDE, contaParaVolume } from '../treino/dados.js';
@@ -66,7 +66,7 @@ async function telaPerfil(el) {
     <section class="cartao perfil-cab">
       <div class="perfil-id">
         <span class="avatar-ex grande">${esc(nome[0].toUpperCase())}</span>
-        <div><h2>${esc(nome)}</h2><p class="sutil">${treinos.length ? `Treinando desde ${new Date(treinos[treinos.length - 1].inicio).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}` : 'Comece seu primeiro treino!'}</p></div>
+        <div><h2>${esc(nome)}</h2><p class="sutil">${treinos.length ? `Treinando desde ${fmtLocal(new Date(treinos[treinos.length - 1].inicio), { month: 'long', year: 'numeric' })}` : 'Comece seu primeiro treino!'}</p></div>
       </div>
       <div class="perfil-numeros">
         <div><strong>${treinos.length}</strong><small>Treinos</small></div>
@@ -159,7 +159,7 @@ async function telaPerfil(el) {
     const corSuave = '#2a6b5c'; // semanas anteriores mais apagadas; a atual em destaque
     await trocar('estat', () => criarGrafico(el.querySelector('[data-g=estat]'), {
       tipo: 'bar',
-      rotulos: semanas.map(s => s.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '')),
+      rotulos: semanas.map(s => fmtLocal(s, { day: 'numeric', month: 'short' }).replace('.', '')),
       series: [{ nome: METRICAS[metrica].nome, dados: valores.map(v => Math.round(v * 100) / 100), cor: valores.map((_, k) => (k === valores.length - 1 ? cor : corSuave)) }],
       formatar: fmt, inteiro: metrica === 'treinos',
     }));
@@ -191,7 +191,7 @@ async function telaPerfil(el) {
       if (doMes && lista) treinosMes++;
       dias += `<button class="dia ${doMes ? '' : 'fora'} ${lista ? 'treinou' : ''} ${chave === hojeK ? 'hoje' : ''}" ${lista ? `data-dia="${chave}" title="${esc(lista.map(t => t.nome).join(', '))}"` : 'disabled'}>${d.getDate()}</button>`;
     }
-    const titulo = primeiro.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    const titulo = fmtLocal(primeiro, { month: 'long', year: 'numeric' });
     calEl.innerHTML = `
       <div class="cal-topo">
         <button class="icon-btn" data-cal="-1" aria-label="Mês anterior">${Icone.voltar}</button>
@@ -256,14 +256,14 @@ async function telaPerfil(el) {
     alvo.innerHTML = `
       <div class="peso-topo">
         <strong class="numero-grande">${fmtNum(atual.peso)} kg</strong>
-        ${ref !== atual ? `<span class="${dif > 0 ? 'sobe' : dif < 0 ? 'desce' : 'sutil'}">${dif > 0 ? '+' : ''}${fmtNum(Math.round(dif * 10) / 10)} kg</span><small class="sutil">desde ${new Date(ref.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</small>` : ''}
+        ${ref !== atual ? `<span class="${dif > 0 ? 'sobe' : dif < 0 ? 'desce' : 'sutil'}">${dif > 0 ? '+' : ''}${fmtNum(Math.round(dif * 10) / 10)} kg</span><small class="sutil">desde ${fmtLocal(new Date(ref.data), { day: '2-digit', month: 'short' })}</small>` : ''}
       </div>
       ${pesos.length > 1 ? '<div class="grafico grafico-baixo"><canvas></canvas></div>' : `<p class="sutil">Registre mais vezes para ver o gráfico.</p>`}`;
     const canvas = alvo.querySelector('canvas');
     if (canvas) {
       const ult = pesos.slice(-20);
       await trocar('peso', () => criarGrafico(canvas, {
-        rotulos: ult.map(m => new Date(m.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })),
+        rotulos: ult.map(m => fmtLocal(new Date(m.data), { day: '2-digit', month: '2-digit' })),
         series: [{ nome: 'Peso', dados: ult.map(m => m.peso) }], sufixo: ' kg',
       }));
     }

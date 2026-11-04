@@ -59,10 +59,32 @@ async function enviar(cliente, userId) {
   }
 }
 
+// Pergunta ao servidor, num pedido só, quais tabelas mudaram desde o cursor de
+// cada uma (função app_alteracoes do supabase/otimizacao.sql). Assim a conferência
+// de cada minuto não precisa consultar as 13 tabelas uma por uma.
+// Sem a função no Supabase (ou se der erro), confere todas, como antes.
+let semFuncaoAlteracoes = false;
+async function tabelasComMudanca(cliente, userId) {
+  const lista = [...tabelas];
+  if (semFuncaoAlteracoes) return lista;
+  const cursores = Object.fromEntries(await Promise.all(lista.map(async t => [t, await DB.meta.obter(`cursor:${userId}:${t}`, '1970-01-01T00:00:00Z')])));
+  try {
+    const { data, error } = await cliente.rpc('app_alteracoes', { cursores });
+    if (error) {
+      if (error.code === 'PGRST202' || /could not find the function/i.test(error.message || '')) semFuncaoAlteracoes = true;
+      return lista;
+    }
+    // Tabela que não veio na resposta (ex.: ainda não criada no Supabase) é conferida normalmente
+    const semMudanca = new Set((data || []).filter(r => r && r.mudou === false).map(r => r.tabela));
+    return lista.filter(t => !semMudanca.has(t));
+  } catch { return lista; }
+}
+
 // Baixa o que mudou no servidor desde a última vez (cursor por tabela).
 // As tabelas são consultadas em paralelo (4 por vez) em vez de uma depois da outra.
 async function baixar(cliente, userId) {
-  const fila = [...tabelas];
+  const fila = await tabelasComMudanca(cliente, userId);
+  if (!fila.length) return;
   const trabalhador = async () => { for (let t; (t = fila.shift());) await baixarTabela(cliente, userId, t); };
   await Promise.all(Array.from({ length: Math.min(4, fila.length) }, trabalhador));
 }

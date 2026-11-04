@@ -1,7 +1,7 @@
 // Aba "Progresso": volume semanal, frequência, recordes e evolução por exercício.
 
 import { Modulos } from '../../core/modulos.js';
-import { esc, fmtKg, fmtVolume, fmtData, inicioDaSemana } from '../../core/util.js';
+import { esc, fmtKg, fmtVolume, fmtData, inicioDaSemana, fmtLocal } from '../../core/util.js';
 import { Icone, definirTitulo, vazio } from '../../core/ui.js';
 import { criarGrafico } from '../../core/graficos.js';
 import { avatarExercicio } from './fotos.js';
@@ -26,7 +26,7 @@ async function telaProgresso(el) {
     const i = semanas.findIndex(s => s.getTime() === ini);
     if (i >= 0) { volume[i] += resumoTreino(t, mapa).volume; frequencia[i]++; }
   });
-  const rotulos = semanas.map(s => s.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+  const rotulos = semanas.map(s => fmtLocal(s, { day: '2-digit', month: '2-digit' }));
 
   // Totais
   const totalVolume = treinos.reduce((s, t) => s + resumoTreino(t, mapa).volume, 0);

@@ -1,7 +1,7 @@
 // Aba "Treino": rotinas, editor de rotina, biblioteca e detalhe de exercício.
 
 import { Modulos } from '../../core/modulos.js';
-import { esc, num, fmtNum, fmtKg, fmtData, fmtRelativo, fmtVolume, fmtDuracao, e1rm, clone } from '../../core/util.js';
+import { esc, num, fmtNum, fmtKg, fmtData, fmtRelativo, fmtVolume, fmtDuracao, e1rm, clone, fmtLocal } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, vazio } from '../../core/ui.js';
 import { criarGrafico } from '../../core/graficos.js';
 import {
@@ -277,7 +277,7 @@ async function telaExercicio(el, { id }) {
 
     if (hist.length > 1) {
       const cron = [...hist].reverse();
-      const rotulos = cron.map(h => new Date(h.treino.inicio).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }));
+      const rotulos = cron.map(h => fmtLocal(new Date(h.treino.inicio), { day: '2-digit', month: '2-digit' }));
       const series = {
         e1rm: { nome: '1RM estimado', dados: cron.map(h => Math.round(melhoresDeSeries(h.series).e1rm * 10) / 10), sufixo: ' kg' },
         carga: { nome: 'Maior carga', dados: cron.map(h => melhoresDeSeries(h.series).carga), sufixo: ' kg' },

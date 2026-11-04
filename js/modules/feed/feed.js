@@ -165,11 +165,29 @@ function telaErro(el, e) {
 }
 
 // ---------- Lista ----------
-// A última lista carregada fica na memória: ao voltar para a aba ela aparece
-// na hora e é atualizada em seguida.
+// A última lista carregada fica guardada (na memória e, a primeira página, no
+// aparelho): ao abrir a aba ela aparece na hora e é atualizada em seguida.
 const caches = {}; // tipo -> { posts, temMais, pagina }
-const limparCache = () => { delete caches.treino; delete caches.refeicao; };
 const ABAS = { treino: 'Treinos', refeicao: 'Refeições' };
+const POR_PAGINA = 15;
+const chaveSalva = () => `feedCache:${Auth.usuario()?.id}`;
+const limparSalvos = () => { try { Object.keys(localStorage).filter(k => k.startsWith('feedCache:')).forEach(k => localStorage.removeItem(k)); } catch { /* sem armazenamento */ } };
+const limparCache = () => { delete caches.treino; delete caches.refeicao; limparSalvos(); };
+function doCache(tipo) {
+  if (!caches[tipo]) {
+    try { const s = JSON.parse(localStorage.getItem(chaveSalva()) || 'null')?.[tipo]; if (s?.posts) caches[tipo] = s; } catch { /* ignora */ }
+  }
+  return caches[tipo];
+}
+function salvarNoAparelho() {
+  try {
+    const o = {};
+    for (const t of Object.keys(ABAS)) if (caches[t]) o[t] = { posts: caches[t].posts.slice(0, POR_PAGINA), temMais: caches[t].temMais || caches[t].posts.length > POR_PAGINA, pagina: 0 };
+    localStorage.setItem(chaveSalva(), JSON.stringify(o));
+  } catch { /* sem espaço: fica só na memória */ }
+}
+// Saiu da conta: não deixa a lista de uma pessoa aparecer para outra
+Bus.on('auth:mudou', s => { if (!s) { delete caches.treino; delete caches.refeicao; limparSalvos(); } });
 const abaSalva = () => { try { return ABAS[localStorage.getItem('feedAba')] ? localStorage.getItem('feedAba') : 'treino'; } catch { return 'treino'; } };
 const VAZIO = {
   treino: ['Nenhum treino ainda', 'Quando você ou seus amigos concluírem um treino, ele aparece aqui.', '<a class="btn btn-primario" href="#/treino">Começar treino</a>'],
@@ -190,14 +208,14 @@ async function telaFeed(el) {
       ${Object.entries(ABAS).map(([t, nome]) => `<button role="tab" data-aba="${t}" class="${t === tipo ? 'ativo' : ''}" aria-selected="${t === tipo}">${t === 'treino' ? Icone.treino : Icone.dieta}${nome}</button>`).join('')}
     </div>
     <div data-perfil></div>
-    <div class="feed-lista" data-lista>${caches[tipo] ? '' : ESQUELETO}</div>
+    <div class="feed-lista" data-lista>${doCache(tipo) ? '' : ESQUELETO}</div>
     <div class="feed-rodape" data-rodape></div>`;
   const lista = el.querySelector('[data-lista]');
   const rodape = el.querySelector('[data-rodape]');
   const posts = new Map();
   let estado = caches[tipo] ? { ...caches[tipo] } : null;
   let parado = false;
-  const guardar = () => { caches[tipo] = { ...estado }; };
+  const guardar = () => { caches[tipo] = { ...estado }; salvarNoAparelho(); };
 
   const desenhar = () => {
     posts.clear();
@@ -250,7 +268,7 @@ async function telaFeed(el) {
     tipo = b.dataset.aba;
     try { localStorage.setItem('feedAba', tipo); } catch { /* sem armazenamento */ }
     el.querySelectorAll('[data-aba]').forEach(x => { const a = x === b; x.classList.toggle('ativo', a); x.setAttribute('aria-selected', a); });
-    estado = caches[tipo] ? { ...caches[tipo] } : null;
+    estado = doCache(tipo) ? { ...caches[tipo] } : null;
     if (estado) desenhar(); else { posts.clear(); lista.innerHTML = ESQUELETO; rodape.innerHTML = ''; }
     atualizar();
   });

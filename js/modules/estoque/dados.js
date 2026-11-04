@@ -18,7 +18,7 @@
 
 import { DB } from '../../core/db.js';
 import { Sync } from '../../core/sync.js';
-import { Bus, debounce, fmtNum } from '../../core/util.js';
+import { Bus, debounce, fmtNum, compararTexto } from '../../core/util.js';
 import { T as TD, itemFeito, hojeISO } from '../dieta/dados.js';
 
 export const TE = { itens: 'estoque', mov: 'estoque_mov' };
@@ -26,7 +26,7 @@ export const UNIDADES = { g: 'g', ml: 'ml', un: 'un' };
 
 // ---------- Itens ----------
 export async function listarItens() {
-  return (await DB.todos(TE.itens)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  return (await DB.todos(TE.itens)).sort((a, b) => compararTexto(a.nome, b.nome));
 }
 export const obterItem = id => DB.obter(TE.itens, id);
 

@@ -1,7 +1,7 @@
 // Aba "Corpo": registro de medidas corporais com gráfico.
 
 import { Modulos } from '../../core/modulos.js';
-import { esc, num, fmtNum, fmtData, fmtRelativo, dataInput } from '../../core/util.js';
+import { esc, num, fmtNum, fmtData, fmtRelativo, dataInput, fmtLocal } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, folha, vazio } from '../../core/ui.js';
 import { criarGrafico } from '../../core/graficos.js';
 import { TABELA_MEDIDAS, CAMPOS_MEDIDA, listarMedidas, salvarMedida, excluirMedida, pesoAtual } from './dados.js';
@@ -108,7 +108,7 @@ async function telaCorpo(el, _p, query) {
     const pontos = medidas.filter(m => m[k] !== null && m[k] !== undefined).reverse();
     const canvas = el.querySelector('canvas'); if (!canvas) return;
     const g = await criarGrafico(canvas, {
-      rotulos: pontos.map(m => new Date(m.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })),
+      rotulos: pontos.map(m => fmtLocal(new Date(m.data), { day: '2-digit', month: '2-digit' })),
       series: [{ nome: rotulo[k].r, dados: pontos.map(m => m[k]) }],
       sufixo: ` ${rotulo[k].u}`,
     });

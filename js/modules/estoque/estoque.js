@@ -3,7 +3,7 @@
 
 import { Modulos } from '../../core/modulos.js';
 import { Sync } from '../../core/sync.js';
-import { esc, num, fmtNum, normalizar } from '../../core/util.js';
+import { esc, num, fmtNum, normalizar, compararTexto } from '../../core/util.js';
 import { Icone, definirTitulo, toast, folha, confirmar } from '../../core/ui.js';
 import { escolherAlimentos } from '../dieta/componentes.js';
 import { obterConfig, rotuloDia } from '../dieta/dados.js';
@@ -93,7 +93,7 @@ async function sugestoesDoPlano(itens) {
       }
     }
   }
-  return [...vistos.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  return [...vistos.values()].sort((a, b) => compararTexto(a.nome, b.nome));
 }
 
 // ---------- Item: saldo, ações e histórico ----------
@@ -157,7 +157,7 @@ async function telaCompras(el) {
   definirTitulo('Lista de compras', { voltar: '#/dieta/estoque' });
   const [itens, saldo] = await Promise.all([listarItens(), saldos()]);
   const lista = itens.filter(i => precisaComprar(i, saldo.get(i.id) || 0))
-    .sort((a, b) => (saldo.get(a.id) > 0) - (saldo.get(b.id) > 0) || a.nome.localeCompare(b.nome, 'pt-BR'));
+    .sort((a, b) => (saldo.get(a.id) > 0) - (saldo.get(b.id) > 0) || compararTexto(a.nome, b.nome));
   el.innerHTML = `
     ${avisoSql()}
     <p class="sutil pequeno">Entra aqui sozinho o que chegou no mínimo. Toque em um item quando comprar e informe quanto: o estoque é reposto. Funciona sem internet e sincroniza depois.</p>
@@ -316,7 +316,7 @@ export function formularioItem(item = null, { alimento = null } = {}) {
 async function cartaoHoje(el) {
   const [itens, saldo] = await Promise.all([listarItens(), saldos()]);
   const comprar = itens.filter(i => precisaComprar(i, saldo.get(i.id) || 0))
-    .sort((a, b) => ((saldo.get(a.id) || 0) > 0) - ((saldo.get(b.id) || 0) > 0) || a.nome.localeCompare(b.nome, 'pt-BR'));
+    .sort((a, b) => ((saldo.get(a.id) || 0) > 0) - ((saldo.get(b.id) || 0) > 0) || compararTexto(a.nome, b.nome));
   const vencendo = itens.filter(i => { const d = diasValidade(i); return d != null && d <= 2; });
   const MAX = 5;
   el.innerHTML = `

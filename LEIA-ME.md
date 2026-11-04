@@ -11,6 +11,7 @@ service-worker.js        Cache offline (lista ARQUIVOS) — aumente VERSAO ao pu
 icons/                   Ícones (192, 512, maskable, apple-touch-icon 180, favicon)
 css/style.css            Todo o visual: mobile-first, modo escuro automático, safe areas, layout de computador
 supabase/schema.sql      SQL das tabelas, gatilho de conflito e Row Level Security
+supabase/otimizacao.sql  Funções e índices que deixam a sincronização e o Feed mais rápidos (opcional)
 
 js/config.js             ⚠️ URL e chave anon do Supabase (único arquivo que você precisa editar)
 js/app.js                Ponto de entrada: abre o banco, inicia login/sync, monta abas e rotas

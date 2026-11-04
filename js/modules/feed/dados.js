@@ -141,7 +141,7 @@ const processarRefeicoes = debounce(async () => {
 
 Bus.on('dados:alterados', async ({ tabela, id, local }) => {
   if (tabela !== TD.diario || !id || !local) return;
-  const item = (await DB.todos(TD.diario, { incluirExcluidos: true })).find(i => i.id === id);
+  const item = await DB.obter(TD.diario, id, { incluirExcluidos: true });
   if (!item?.dia || !item.refeicao) return;
   tocadas.add(chaveRef(item.dia, item.refeicao));
   processarRefeicoes();
@@ -173,9 +173,27 @@ async function completar(c, u, posts) {
   return posts;
 }
 
+// Caminho rápido: a função feed_listar (supabase/otimizacao.sql) devolve as
+// publicações já com nome do autor, curtidas e comentários, num pedido só
+// (em vez de quatro). Sem a função no Supabase, usa o caminho antigo.
+let semFuncaoFeed = false;
+const funcaoAusente = e => !!e && (e.code === 'PGRST202' || e.code === '42883' || /could not find the function/i.test(e.message || ''));
+async function viaFuncao(c, u, args) {
+  if (semFuncaoFeed) return null;
+  const { data, error } = await c.rpc('feed_listar', args);
+  if (funcaoAusente(error)) { semFuncaoFeed = true; return null; }
+  verificar(error);
+  return data.map(l => ({
+    ...paraPost(l), autorNome: l.autor_nome || 'Atleta', meu: l.user_id === u.id,
+    curtidas: l.curtidas || 0, curti: !!l.curti, comentarios: l.comentarios || 0,
+  }));
+}
+
 // tipo: 'treino' (publicações sem tipo, as primeiras) ou 'refeicao'
 export async function listarFeed({ pagina = 0, tipo = 'treino' } = {}) {
   const { c, u } = cliente();
+  const rapido = await viaFuncao(c, u, { p_tipo: tipo, p_inicio: pagina * POR_PAGINA, p_qtd: POR_PAGINA });
+  if (rapido) return { posts: rapido, temMais: rapido.length === POR_PAGINA };
   let q = c.from(TF.FEED).select('id, user_id, data').eq('deleted', false);
   q = tipo === 'refeicao' ? q.eq('data->>tipo', 'refeicao') : q.is('data->>tipo', null);
   const { data, error } = await q
@@ -188,6 +206,8 @@ export async function listarFeed({ pagina = 0, tipo = 'treino' } = {}) {
 
 export async function obterPost(id) {
   const { c, u } = cliente();
+  const rapido = await viaFuncao(c, u, { p_id: id });
+  if (rapido) return rapido[0] || null;
   const { data, error } = await c.from(TF.FEED).select('id, user_id, data, deleted').eq('id', id).maybeSingle();
   verificar(error);
   if (!data || data.deleted) return null;

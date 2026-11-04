@@ -50,9 +50,12 @@ async function renderizar({ preservarRolagem = false } = {}) {
     el.innerHTML = `<div class="cartao"><h3>Algo deu errado</h3><p class="sutil">${e.message}</p></div>`;
   }
   if (meu !== contadorRender) { if (typeof limpezaAtual === 'function') limpezaAtual(); return; }
-  // Evita "piscar": troca o conteúdo de uma vez
+  // Evita "piscar": troca o conteúdo de uma vez. Voltar ao topo antes da troca
+  // evita que o navegador monte a tela nova duas vezes (rolar depois força o
+  // cálculo do layout na hora); para manter a rolagem, precisa ser depois.
+  if (!rolagem) rolarPara(0);
   conteudo.replaceChildren(el);
-  rolarPara(rolagem);
+  if (rolagem) rolarPara(rolagem);
   performance.mark(`tela:${caminho}`); // para medir o tempo de cada tela
   Bus.emit('rota:mudou', caminho);
 }

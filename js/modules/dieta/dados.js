@@ -6,7 +6,7 @@
 // muda se o alimento for editado ou excluído depois.
 
 import { DB } from '../../core/db.js';
-import { normalizar, dataInput } from '../../core/util.js';
+import { normalizar, dataInput, fmtLocal, compararTexto } from '../../core/util.js';
 import { listarTreinos } from '../treino/dados.js';
 
 export const T = { diario: 'diario', alimentos: 'alimentos', refeicoes: 'refeicoes', config: 'dieta_config', dias: 'dieta_dias' };
@@ -43,7 +43,7 @@ export const itemFeito = (i, hoje = hojeISO()) => i.feito ?? i.dia < hoje;
 export const refeicaoFeita = (lista, hoje) => lista.length > 0 && lista.every(i => itemFeito(i, hoje));
 export const consumidos = (itens, hoje) => itens.filter(i => itemFeito(i, hoje));
 export async function marcarRefeicaoFeita(lista, feito) {
-  for (const i of lista) await DB.salvar(T.diario, { ...i, feito });
+  await DB.salvarVarios(T.diario, lista.map(i => ({ ...i, feito })));
 }
 
 const emMin = h => { const [a, b] = String(h || '').split(':').map(Number); return Number.isFinite(a) ? a * 60 + (b || 0) : null; };
@@ -161,7 +161,7 @@ export async function aplicarPlano(config, tipo, dia, { substituir = false, so =
   if (substituir && !so) {
     for (const r of config.refeicoes.filter(x => x.so && x.so !== tipo)) {
       const atuais = itens.filter(i => i.refeicao === r.id);
-      if (atuais.length && !atuais.some(i => itemFeito(i))) for (const i of atuais) await DB.excluir(T.diario, i.id);
+      if (atuais.length && !atuais.some(i => itemFeito(i))) await DB.excluirVarios(T.diario, atuais.map(i => i.id));
     }
   }
   for (const r of refeicoesDoTipo(config, tipo)) {
@@ -171,9 +171,9 @@ export async function aplicarPlano(config, tipo, dia, { substituir = false, so =
     const atuais = itens.filter(i => i.refeicao === r.id);
     if (atuais.length) {
       if (!substituir || atuais.some(i => itemFeito(i))) continue;
-      for (const i of atuais) await DB.excluir(T.diario, i.id);
+      await DB.excluirVarios(T.diario, atuais.map(i => i.id));
     }
-    for (const i of doPlano) await DB.salvar(T.diario, { ...novoItem(i.alimento, i.gramas, { dia, refeicao: r.id, porcao: i.porcao }), feito: false, ordem: ordem++ });
+    await DB.salvarVarios(T.diario, doPlano.map(i => ({ ...novoItem(i.alimento, i.gramas, { dia, refeicao: r.id, porcao: i.porcao }), feito: false, ordem: ordem++ })));
     refeicoes++;
   }
   return refeicoes;
@@ -193,23 +193,37 @@ export function rotuloDia(dia) {
   if (dia === h) return 'Hoje';
   if (dia === somarDias(h, -1)) return 'Ontem';
   if (dia === somarDias(h, 1)) return 'Amanhã';
-  const s = new Date(`${dia}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' }).replace('.', '');
+  const s = fmtLocal(new Date(`${dia}T12:00:00`), { weekday: 'long', day: 'numeric', month: 'short' }).replace('.', '');
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Itens do diário agrupados por dia, refeito só quando o diário muda
+// (antes, cada consulta percorria o diário inteiro).
+let porDia = null, versaoPorDia = null;
+async function itensPorDia() {
+  if (porDia && versaoPorDia === DB.versao(T.diario)) return porDia;
+  const todos = await DB.todos(T.diario);
+  const v = DB.versao(T.diario);
+  porDia = new Map();
+  for (const i of todos) { let l = porDia.get(i.dia); if (!l) porDia.set(i.dia, l = []); l.push(i); }
+  versaoPorDia = v;
+  return porDia;
+}
 export async function itensDoDia(dia) {
-  return (await DB.todos(T.diario)).filter(i => i.dia === dia).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || (a.created_at || '').localeCompare(b.created_at || ''));
+  return ((await itensPorDia()).get(dia) || []).slice().sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || (a.created_at || '').localeCompare(b.created_at || ''));
 }
 export async function diasComRegistro() {
-  return new Set((await DB.todos(T.diario)).map(i => i.dia));
+  return new Set((await itensPorDia()).keys());
 }
 // Totais consumidos (kcal e macros) de cada dia pedido: { 'aaaa-mm-dd': {kcal, p, c, g...} }
 export async function totaisPorDia(dias) {
-  const todos = await DB.todos(T.diario);
-  return Object.fromEntries(dias.map(d => [d, somar(consumidos(todos.filter(i => i.dia === d)))]));
+  const mapa = await itensPorDia();
+  return Object.fromEntries(dias.map(d => [d, somar(consumidos(mapa.get(d) || []))]));
 }
 export const salvarItem = i => DB.salvar(T.diario, i);
+export const salvarItens = lista => DB.salvarVarios(T.diario, lista);
 export const excluirItem = id => DB.excluir(T.diario, id);
+export const excluirItens = ids => DB.excluirVarios(T.diario, ids);
 
 export function novoItem(alimento, gramas, { dia, refeicao, porcao = null }) {
   return { dia, refeicao, gramas, porcao, alimento: copiaAlimento(alimento), ordem: Date.now() };
@@ -262,7 +276,7 @@ export async function recentes(limite = 40) {
 
 // ---------- Alimentos personalizados ----------
 export async function listarMeusAlimentos() {
-  return (await DB.todos(T.alimentos)).map(a => ({ ...a, fonte: 'meu', ref: a.id })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  return (await DB.todos(T.alimentos)).map(a => ({ ...a, fonte: 'meu', ref: a.id })).sort((a, b) => compararTexto(a.nome, b.nome));
 }
 export async function salvarAlimento(a) {
   const { fonte, ref, ...resto } = a;
@@ -314,7 +328,7 @@ export const excluirAlimento = id => DB.excluir(T.alimentos, id);
 
 // ---------- Refeições salvas (combinações prontas) ----------
 export async function listarRefeicoesSalvas() {
-  return (await DB.todos(T.refeicoes)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  return (await DB.todos(T.refeicoes)).sort((a, b) => compararTexto(a.nome, b.nome));
 }
 export const salvarRefeicaoSalva = r => DB.salvar(T.refeicoes, r);
 export const excluirRefeicaoSalva = id => DB.excluir(T.refeicoes, id);
