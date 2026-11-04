@@ -7,9 +7,11 @@ import { DB } from '../core/db.js';
 import { Bus, esc, fmtDataHora } from '../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, folha } from '../core/ui.js';
 import { som } from '../core/som.js';
-import { exportarBackup, importarBackup } from '../core/backup.js';
 import { prefs } from './treino/dados.js';
-import { importarHevy } from './treino/importar-hevy.js';
+// Backup e importação do Hevy só são baixados quando usados
+const exportarBackup = async () => (await import('../core/backup.js')).exportarBackup();
+const importarBackup = async f => (await import('../core/backup.js')).importarBackup(f);
+const importarHevy = async f => (await import('./treino/importar-hevy.js')).importarHevy(f);
 import { escolherDescanso } from './treino/componentes.js';
 import { TEMAS, temaAtual, aplicarTema } from '../core/tema.js';
 

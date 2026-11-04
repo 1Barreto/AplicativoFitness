@@ -53,6 +53,7 @@ async function renderizar({ preservarRolagem = false } = {}) {
   // Evita "piscar": troca o conteúdo de uma vez
   conteudo.replaceChildren(el);
   rolarPara(rolagem);
+  performance.mark(`tela:${caminho}`); // para medir o tempo de cada tela
   Bus.emit('rota:mudou', caminho);
 }
 
@@ -205,16 +206,33 @@ async function iniciar() {
   preCarregarGraficos();
 
   if ('serviceWorker' in navigator) {
-    // Versão nova assumiu no meio do carregamento: recarrega uma vez para não
-    // misturar arquivos novos com antigos (ex.: JS novo com CSS antigo).
+    // Atualização: quando publico uma versão nova, o service worker novo baixa os
+    // arquivos em segundo plano e assume. Aí a página recarrega para usar a versão
+    // nova inteira (sem misturar JS novo com CSS antigo). Se você estiver no meio
+    // de algo (treino em andamento, uma janela aberta, digitando), não recarrega na
+    // sua cara: mostra um aviso e atualiza quando você tocar nele ou sair da tela.
     const tinhaControle = !!navigator.serviceWorker.controller;
-    let recarregando = false;
+    let recarregando = false, pendente = false;
+    const ocupado = () => caminhoAtual().caminho === '/treino/ativo' || document.body.classList.contains('com-modal')
+      || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+    const recarregar = () => { if (recarregando) return; recarregando = true; location.reload(); };
+    const tentar = () => { if (pendente && !ocupado()) recarregar(); };
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!tinhaControle || recarregando) return;
-      recarregando = true;
-      location.reload();
+      pendente = true;
+      if (!ocupado()) { recarregar(); return; }
+      toast('<button class="link-btn" data-atualizar>Versão nova do app pronta. Toque para atualizar.</button>', 'info', 15000);
+      document.querySelector('[data-atualizar]')?.addEventListener('click', recarregar);
+      Bus.on('rota:mudou', tentar);
     });
-    navigator.serviceWorker.register('service-worker.js').catch(e => console.warn('SW', e));
+    navigator.serviceWorker.register('service-worker.js').then(reg => {
+      // O iPhone quase não procura versão nova sozinho com o app aberto em segundo
+      // plano: procura toda vez que o app volta para a frente.
+      addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+        else tentar(); // saiu do app com atualização pendente: aplica agora
+      });
+    }).catch(e => console.warn('SW', e));
   }
 }
 

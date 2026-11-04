@@ -20,9 +20,9 @@
   <meta name="format-detection" content="telephone=no">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap">
+  <!-- Fontes no próprio app (sem depender do Google Fonts): abre mais rápido e funciona offline -->
+  <link rel="preload" href="fonts/plus-jakarta-sans.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css">
   <!-- Baixa todos os módulos JS em paralelo (sem esperar um import revelar o próximo) -->
   <link rel="modulepreload" href="js/app.js">
@@ -35,7 +35,6 @@
   <link rel="modulepreload" href="js/core/ui.js">
   <link rel="modulepreload" href="js/core/som.js">
   <link rel="modulepreload" href="js/core/graficos.js">
-  <link rel="modulepreload" href="js/core/backup.js">
   <link rel="modulepreload" href="js/core/tema.js">
   <link rel="modulepreload" href="js/modules/index.js">
   <link rel="modulepreload" href="js/modules/hoje.js">
@@ -46,9 +45,7 @@
   <link rel="modulepreload" href="js/modules/treino/treino.js">
   <link rel="modulepreload" href="js/modules/treino/sessao.js">
   <link rel="modulepreload" href="js/modules/treino/historico.js">
-  <link rel="modulepreload" href="js/modules/treino/compartilhar.js">
   <link rel="modulepreload" href="js/modules/treino/progresso.js">
-  <link rel="modulepreload" href="js/modules/treino/importar-hevy.js">
   <link rel="modulepreload" href="js/modules/treino/fotos.js">
   <link rel="modulepreload" href="js/modules/dieta/dados.js">
   <link rel="modulepreload" href="js/modules/dieta/componentes.js">
@@ -59,7 +56,6 @@
   <link rel="modulepreload" href="js/modules/resumo.js">
   <link rel="modulepreload" href="js/modules/corpo/dados.js">
   <link rel="modulepreload" href="js/modules/corpo/corpo.js">
-  <link rel="modulepreload" href="js/modules/corpo/saude.js">
   <link rel="modulepreload" href="js/modules/perfil/perfil.js">
 </head>
 <body>

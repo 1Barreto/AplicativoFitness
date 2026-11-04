@@ -109,6 +109,12 @@ export const DB = {
     return tx('registros', 'readonly', s => pedido(s.get(`${tabela}:${id}`)));
   },
 
+  // Ids com alteração local ainda não enviada, de uma tabela
+  async idsPendentes(tabela) {
+    const linhas = await tx('registros', 'readonly', s => pedido(s.index('sujo').getAll(1)));
+    return new Set(linhas.filter(l => l.tabela === tabela).map(l => l.reg.id));
+  },
+
   async pendentes() {
     return tx('registros', 'readonly', s => pedido(s.index('sujo').getAll(1)));
   },

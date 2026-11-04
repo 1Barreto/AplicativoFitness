@@ -1,7 +1,7 @@
 // Imagens dos exercícios.
 //
 // Desenhos: Everkinetic (github.com/everkinetic/data, CC BY-SA 4.0), em
-// img/desenhos/<id>.png (miniatura) e <id>-r.png / <id>-t.png (início e fim).
+// img/desenhos/<id>.webp (miniatura) e <id>-r.webp / <id>-t.webp (início e fim).
 // Fotos: Free Exercise DB (github.com/yuhonas/free-exercise-db, domínio
 // público). Miniaturas em img/exercicios/<id>.jpg; a foto grande é buscada
 // no GitHub quando aberta.
@@ -198,7 +198,7 @@ function fotoPadrao(nome = '') {
   return palavra ? palavra[1] : null;
 }
 
-const desenho = id => ({ mini: `img/desenhos/${id}.png`, grande: `img/desenhos/${id}-r.png`, grande2: `img/desenhos/${id}-t.png`, desenho: true });
+const desenho = id => ({ mini: `img/desenhos/${id}.webp`, grande: `img/desenhos/${id}-r.webp`, grande2: `img/desenhos/${id}-t.webp`, desenho: true });
 const foto = id => ({ mini: `img/exercicios/${id}.jpg`, grande: `${URL_GRANDE}${id}/0.jpg`, grande2: `${URL_GRANDE}${id}/1.jpg` });
 
 // Retorna { mini, grande, grande2, desenho? } (URLs) ou null
@@ -276,7 +276,7 @@ export function escolherFoto(ex) {
       const indexar = (lista, prefixo, img) => lista.map(([id, nome, musculo, equip = '']) =>
         [`${prefixo}:${id}`, nome, musculo, normalizar(`${nome} ${traduzir(nome)} ${musculo} ${equip}`), img(id)]);
       const indices = {
-        desenhos: indexar(BANCO_DESENHOS, 'ek', id => `img/desenhos/${id}.png`),
+        desenhos: indexar(BANCO_DESENHOS, 'ek', id => `img/desenhos/${id}.webp`),
         fotos: indexar(BANCO_FOTOS, 'fedb', id => `img/exercicios/${id}.jpg`),
       };
       let tipo = 'desenhos', busca = '';

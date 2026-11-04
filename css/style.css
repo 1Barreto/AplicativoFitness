@@ -1,3 +1,7 @@
+/* Fontes (arquivos em fonts/, só o alfabeto latino, que cobre o português) */
+@font-face { font-family: "Plus Jakarta Sans"; font-style: normal; font-weight: 400 800; font-display: swap; src: url(../fonts/plus-jakarta-sans.woff2) format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 500 700; font-display: swap; src: url(../fonts/space-grotesk.woff2) format("woff2"); }
+
 /* ==========================================================================
    Aplicativo — estilos
    Mobile-first, tema escuro OLED com 5 opções de cor, safe areas do iPhone.
@@ -211,8 +215,6 @@ a.cartao:active, button.linha-lista:active, .item-exercicio:active { opacity: .7
 .linha-botoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 .linha-botoes .btn { flex: 1; }
 .rodape-acoes { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 4px; }
-.acoes-topo { display: flex; gap: 10px; }
-.acoes-topo .btn { flex: 1; }
 
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
@@ -340,12 +342,9 @@ label.linha-lista { cursor: pointer; }
 }
 .btn-check svg { width: 20px; height: 20px; }
 .feita .btn-check { background: var(--destaque-2); color: var(--sobre-destaque); }
-.selo-recorde { position: absolute; left: 0; top: -2px; color: var(--ouro); }
-.selo-recorde svg { width: 14px; height: 14px; }
 .selo { display: inline-flex; align-items: center; gap: 4px; color: var(--ouro); font-size: 12px; font-weight: 600; }
 .selo svg { width: 16px; height: 16px; }
 
-.sessao-cab { display: flex; flex-direction: column; gap: 8px; }
 .estatisticas { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; margin-top: 8px; }
 .estatisticas div { display: flex; flex-direction: column; }
 .estatisticas small { font-size: 12px; color: var(--texto-2); }
@@ -1070,7 +1069,6 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
 .linha-meta b { display: inline-flex; align-items: center; gap: 6px; font-family: var(--fonte-titulo); font-size: 16px; }
 .linha-meta svg { width: 14px; height: 14px; color: var(--p); }
 .linha-meta small { color: var(--texto-2); font-size: 13px; }
-.tipo-auto { margin: -8px 0 -6px; text-align: center; }
 .semana-dia.treino small { color: var(--p); }
 .tipo-mini { font-size: 10px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; background: #1c1c1f; color: var(--texto-2); }
 .tipo-mini.treino { background: rgba(var(--p-rgb), .14); color: var(--p); }
@@ -1108,8 +1106,6 @@ b.m-p, b.m-c, b.m-g, strong.m-p, strong.m-c, strong.m-g { color: var(--m); }
   .semana-barra.ativo.passou .barra-area i { background: var(--s); }
   .semana-barra small { font-size: 12px; font-weight: 600; }
   .semana-barra.ativo small { color: var(--p); }
-  .semana-meta { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255, 255, 255, .25); pointer-events: none; z-index: 1; }
-  .semana-meta span { position: absolute; right: 0; top: -18px; font-size: 11px; font-style: normal; color: var(--texto-2); }
 
   /* Refeições em tabela: colunas alinhadas */
   .dieta-refeicoes { display: flex; flex-direction: column; gap: 10px; }

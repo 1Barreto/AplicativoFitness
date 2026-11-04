@@ -9,7 +9,8 @@ import {
 } from './dados.js';
 import { rotulosSeries, fmtRir } from './componentes.js';
 import { montarEditor, iniciarTreino } from './sessao.js';
-import { compartilharTreino } from './compartilhar.js';
+// Compartilhar só é baixado quando usado
+const compartilharTreino = async (...a) => (await import('./compartilhar.js')).compartilharTreino(...a);
 
 async function telaLista(el) {
   definirTitulo('Histórico', { voltar: '#/perfil' });

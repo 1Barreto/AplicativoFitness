@@ -212,6 +212,17 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
     rolarPara(rolagem);
   }
 
+  // Redesenha só o cartão de um exercício (marcar série, RIR, tipo...), em vez
+  // da tela inteira: menos trabalho por toque e as fotos não piscam.
+  function desenharExercicio(i) {
+    const atual = el.querySelector(`[data-lista-ex] > [data-ex="${i}"]`);
+    if (!atual || !estado.exercicios[i]) { desenhar(); return; }
+    const t = document.createElement('template');
+    t.innerHTML = htmlExercicio(estado.exercicios[i], i).trim();
+    atual.replaceWith(t.content.firstElementChild);
+    atualizarResumo();
+  }
+
   function atualizarResumo() {
     const alvo = el.querySelector('[data-resumo]'); if (!alvo) return;
     const fim = modo === 'ativo' ? new Date().toISOString() : estado.fim;
@@ -283,16 +294,16 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
     } else if (acao === 'add-serie') {
       const ult = e.series[e.series.length - 1];
       e.series.push(novaSerie(ult ? { tipo: ult.tipo === 'A' ? 'N' : ult.tipo, peso: ult.peso, reps: ult.reps } : {}));
-      mudou(); desenhar();
+      mudou(); desenharExercicio(i);
     } else if (acao === 'tipo') {
       const r = await escolherTipoSerie(e.series[j].tipo);
       if (!r) return;
       if (r === 'remover') e.series.splice(j, 1); else e.series[j].tipo = r;
-      mudou(); desenhar();
+      mudou(); desenharExercicio(i);
     } else if (acao === 'copiar-ant') {
       const a = (anteriores.get(e.exercicio_id) || [])[j]; if (!a) return;
       Object.assign(e.series[j], { peso: a.peso, reps: a.reps });
-      mudou(); desenhar();
+      mudou(); desenharExercicio(i);
     } else if (acao === 'feita') {
       const s = e.series[j];
       if (!s.feita) {
@@ -308,20 +319,20 @@ export async function montarEditor(el, estado, { modo, aoMudar }) {
         }
         if (modo === 'ativo' && e.descanso > 0) iniciarDescanso(e.descanso, mapa.get(e.exercicio_id)?.nome);
       } else { s.feita = false; s.recordes = []; }
-      mudou(); desenhar();
+      mudou(); desenharExercicio(i);
     } else if (acao === 'rir') {
       const v = await escolherRir(e.series[j].rir);
       if (v === undefined) return;
       e.series[j].rir = v;
-      mudou(); desenhar();
+      mudou(); desenharExercicio(i);
     } else if (acao === 'nota-ex') {
       if (notasAbertas.has(e.uid) && !e.notas) notasAbertas.delete(e.uid); else notasAbertas.add(e.uid);
-      desenhar();
+      desenharExercicio(i);
       el.querySelector(`[data-ex="${i}"] .campo-nota`)?.focus();
     } else if (acao === 'descanso-ex') {
       const seg = await escolherDescanso(e.descanso);
       if (seg === undefined) return;
-      e.descanso = seg; mudou(); desenhar();
+      e.descanso = seg; mudou(); desenharExercicio(i);
     } else if (acao === 'menu-ex') {
       const r = await menu(mapa.get(e.exercicio_id)?.nome || 'Exercício', [
         { texto: 'Mover para cima', valor: 'cima', icone: Icone.cima },

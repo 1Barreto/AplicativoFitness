@@ -59,38 +59,47 @@ async function enviar(cliente, userId) {
   }
 }
 
+// Baixa o que mudou no servidor desde a última vez (cursor por tabela).
+// As tabelas são consultadas em paralelo (4 por vez) em vez de uma depois da outra.
 async function baixar(cliente, userId) {
-  for (const tabela of tabelas) {
-    const chaveCursor = `cursor:${userId}:${tabela}`;
-    const inicio = await DB.meta.obter(chaveCursor, '1970-01-01T00:00:00Z');
-    let cursor = inicio;
-    let pagina = 0;
-    for (;;) {
-      const { data, error } = await cliente.from(tabela)
-        .select('id, updated_at, deleted, data, server_updated_at')
-        .gte('server_updated_at', inicio)
-        .order('server_updated_at', { ascending: true })
-        .range(pagina * 1000, pagina * 1000 + 999);
-      if (tabelaAusente(error)) { ausentes.add(tabela); break; }
-      if (error) throw error;
-      if (!data.length) break;
+  const fila = [...tabelas];
+  const trabalhador = async () => { for (let t; (t = fila.shift());) await baixarTabela(cliente, userId, t); };
+  await Promise.all(Array.from({ length: Math.min(4, fila.length) }, trabalhador));
+}
 
-      // Mescla: só substitui o local se o remoto for igual ou mais novo,
-      // ou se o local não tiver alterações pendentes.
-      const aGravar = [];
-      for (const linha of data) {
-        const bruto = await DB.bruto(tabela, linha.id);
-        if (bruto && bruto.sujo && bruto.reg.updated_at > linha.updated_at) continue;
-        if (bruto && !bruto.sujo && bruto.reg.updated_at === linha.updated_at && !!bruto.reg.deleted === !!linha.deleted) continue;
-        aGravar.push(paraLocal(linha));
-      }
-      await DB.gravarRemotos(tabela, aGravar);
-      cursor = data[data.length - 1].server_updated_at;
-      if (data.length < 1000) break;
-      pagina++;
+async function baixarTabela(cliente, userId, tabela) {
+  const chaveCursor = `cursor:${userId}:${tabela}`;
+  const inicio = await DB.meta.obter(chaveCursor, '1970-01-01T00:00:00Z');
+  let cursor = inicio;
+  let pagina = 0;
+  for (;;) {
+    const { data, error } = await cliente.from(tabela)
+      .select('id, updated_at, deleted, data, server_updated_at')
+      .gte('server_updated_at', inicio)
+      .order('server_updated_at', { ascending: true })
+      .range(pagina * 1000, pagina * 1000 + 999);
+    if (tabelaAusente(error)) { ausentes.add(tabela); return; }
+    if (error) throw error;
+    if (!data.length) break;
+
+    // Mescla: só substitui o local se o remoto for igual ou mais novo,
+    // ou se o local não tiver alterações pendentes. Os registros locais vêm
+    // da memória (uma leitura só), em vez de uma consulta ao banco por linha.
+    const locais = new Map((await DB.todos(tabela, { incluirExcluidos: true })).map(r => [r.id, r]));
+    const sujos = await DB.idsPendentes(tabela);
+    const aGravar = [];
+    for (const linha of data) {
+      const local = locais.get(linha.id), sujo = sujos.has(linha.id);
+      if (local && sujo && local.updated_at > linha.updated_at) continue;
+      if (local && !sujo && local.updated_at === linha.updated_at && !!local.deleted === !!linha.deleted) continue;
+      aGravar.push(paraLocal(linha));
     }
-    await DB.meta.definir(chaveCursor, cursor);
+    await DB.gravarRemotos(tabela, aGravar);
+    cursor = data[data.length - 1].server_updated_at;
+    if (data.length < 1000) break;
+    pagina++;
   }
+  await DB.meta.definir(chaveCursor, cursor);
 }
 
 // Se o servidor não responder, a sincronização vira "Erro" em vez de ficar
