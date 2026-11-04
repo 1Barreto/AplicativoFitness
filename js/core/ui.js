@@ -37,6 +37,7 @@ export const Icone = {
   baixo: svg('<path d="m6 9 6 6 6-6"/>'),
   copiar: svg('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/>'),
   dieta: svg('<path d="M12 8c-3-3-8-1-8 4s3 9 5 9c1 0 2-.5 3-.5s2 .5 3 .5c2 0 5-4 5-9s-5-7-8-4z"/><path d="M12 8c0-3 1-5 3-5"/>'),
+  estoque: svg('<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5M12 12v9"/>'),
   balanca: svg('<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 11a5 5 0 0 1 10 0z"/><path d="m12 11 1.5-2.5"/>'),
 };
 

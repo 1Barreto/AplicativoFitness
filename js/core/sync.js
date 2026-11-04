@@ -38,6 +38,12 @@ function paraLocal(linha) {
   return { ...(linha.data || {}), id: linha.id, updated_at: linha.updated_at, deleted: !!linha.deleted };
 }
 
+// Tabela de um módulo novo que ainda não foi criada no Supabase (o SQL não foi
+// rodado): o resto sincroniza normalmente e os dados dela ficam guardados no
+// aparelho, esperando a tabela existir.
+const ausentes = new Set();
+const tabelaAusente = e => !!e && (e.code === 'PGRST205' || e.code === '42P01' || /could not find the table|does not exist/i.test(e.message || ''));
+
 async function enviar(cliente, userId) {
   const pendentes = await DB.pendentes();
   const porTabela = {};
@@ -46,6 +52,7 @@ async function enviar(cliente, userId) {
     for (let i = 0; i < regs.length; i += LOTE) {
       const lote = regs.slice(i, i + LOTE);
       const { error } = await cliente.from(tabela).upsert(lote.map(r => paraRemoto(r, userId)), { onConflict: 'id' });
+      if (tabelaAusente(error)) { ausentes.add(tabela); break; } // fica pendente até a tabela existir
       if (error) throw error;
       await DB.marcarEnviados(lote.map(r => ({ tabela, id: r.id, updated_at: r.updated_at })));
     }
@@ -64,6 +71,7 @@ async function baixar(cliente, userId) {
         .gte('server_updated_at', inicio)
         .order('server_updated_at', { ascending: true })
         .range(pagina * 1000, pagina * 1000 + 999);
+      if (tabelaAusente(error)) { ausentes.add(tabela); break; }
       if (error) throw error;
       if (!data.length) break;
 
@@ -99,6 +107,7 @@ async function executar({ silenciosa = false } = {}) {
   if (!navigator.onLine) { definirEstado('offline'); return; }
   if (!silenciosa || await DB.contarPendentes()) definirEstado('sincronizando');
   try {
+    ausentes.clear();
     await comLimite((async () => {
       await enviar(cliente, usuario.id);
       await baixar(cliente, usuario.id);
@@ -129,7 +138,7 @@ export const Sync = {
   registrarTabela(nome) { tabelas.add(nome); },
   tabelas: () => [...tabelas],
 
-  info: () => ({ estado, erro: ultimoErro, ultimaSync, logado: !!Auth.usuario() }),
+  info: () => ({ estado, erro: ultimoErro, ultimaSync, logado: !!Auth.usuario(), ausentes: [...ausentes] }),
 
   sincronizar(opcoes) {
     if (!emAndamento) emAndamento = executar(opcoes).finally(() => { emAndamento = null; });

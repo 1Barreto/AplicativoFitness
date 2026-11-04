@@ -187,6 +187,16 @@ export function somarDias(dia, n) {
   return dataInput(d);
 }
 
+// 'Hoje', 'Ontem', 'Amanhã' ou 'Terça, 4 de nov'
+export function rotuloDia(dia) {
+  const h = hojeISO();
+  if (dia === h) return 'Hoje';
+  if (dia === somarDias(h, -1)) return 'Ontem';
+  if (dia === somarDias(h, 1)) return 'Amanhã';
+  const s = new Date(`${dia}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' }).replace('.', '');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export async function itensDoDia(dia) {
   return (await DB.todos(T.diario)).filter(i => i.dia === dia).sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || (a.created_at || '').localeCompare(b.created_at || ''));
 }

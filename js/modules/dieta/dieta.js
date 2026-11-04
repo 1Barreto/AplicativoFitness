@@ -8,21 +8,13 @@ import { pesoAtual } from '../corpo/dados.js';
 import {
   T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, comMetas, proximaMudancaMetas, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, excluirItem, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
-  copiaAlimento, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS, refeicoesDoTipo, planoDe, comPlano, aplicarPlano,
+  copiaAlimento, rotuloDia, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS, refeicoesDoTipo, planoDe, comPlano, aplicarPlano,
 } from './dados.js';
 import { escolherAlimentos, escolherQuantidade, formularioAlimento, formularioMetas, barraMacros, linhaMacros } from './componentes.js';
 
 const DIAS_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const dataDe = dia => new Date(`${dia}T12:00:00`);
 
-function rotuloDia(dia) {
-  const h = hojeISO();
-  if (dia === h) return 'Hoje';
-  if (dia === somarDias(h, -1)) return 'Ontem';
-  if (dia === somarDias(h, 1)) return 'Amanhã';
-  const s = dataDe(dia).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' }).replace('.', '');
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 // Anel de calorias (SVG)
 // planejado: total com as refeições ainda não feitas (arco mais claro)
@@ -161,6 +153,7 @@ async function telaDieta(el, _p, query) {
           <a class="chip" href="#/dieta/alimentos">${Icone.dieta}<span>Meus alimentos</span></a>
           <a class="chip" href="#/dieta/refeicoes">${Icone.copiar}<span>Refeições</span></a>
           <a class="chip" href="#/dieta/gasto">${Icone.progresso}<span>Gasto calórico</span></a>
+          <a class="chip" href="#/dieta/estoque">${Icone.estoque}<span>Estoque</span></a>
           ${bloqueado || (!itens.length && temPlano) ? '' : `<button class="chip" data-acao="plano">${Icone.check}<span>Aplicar ${nomePlano}</span></button>`}
           ${!itens.length && !bloqueado ? `<button class="chip" data-acao="copiar-dia">${Icone.historico}<span>Copiar dia anterior</span></button>` : ''}
         </nav>

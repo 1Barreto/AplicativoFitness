@@ -1494,3 +1494,47 @@ body.com-tela-salvar .sessao-topo-fixa { display: none; }
 .passos-atalho { padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.45; margin-top: 8px; }
 .passos-atalho ul { padding-left: 18px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
 .passos-atalho code { background: var(--vidro); padding: 1px 6px; border-radius: 6px; }
+
+/* ---------- Estoque de casa ---------- */
+.linha-busca-estoque { margin: 12px 0; }
+.linha-busca-estoque .btn { flex-shrink: 0; }
+.item-estoque .item-texto { min-width: 0; }
+.item-estoque small { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.qtd-estoque { font-variant-numeric: tabular-nums; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.aviso-neg { color: var(--aviso); display: inline-flex; }
+.aviso-neg svg { width: 14px; height: 14px; }
+.nivel-barra { height: 5px; border-radius: 3px; background: var(--vidro-forte); overflow: hidden; margin-top: 7px; }
+.nivel-barra i { display: block; height: 100%; border-radius: 3px; background: var(--destaque); transition: width .3s; }
+.nivel-barra.nivel-baixo i { background: var(--aviso); }
+.nivel-barra.nivel-acabou i { background: var(--perigo); }
+.nivel-txt { font-size: 12px; font-weight: 700; color: var(--destaque); }
+.nivel-txt.nivel-baixo { color: var(--aviso); }
+.nivel-txt.nivel-acabou { color: var(--perigo); }
+.selo-validade { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: rgba(245, 184, 76, .14); color: var(--aviso); }
+.selo-validade.urgente { background: rgba(255, 92, 122, .15); color: var(--perigo); }
+.estoque-topo .estoque-saldo { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.estoque-topo .estoque-saldo small { width: 100%; }
+.estoque-topo .nivel-barra { height: 8px; margin: 10px 0; }
+.aviso-estoque { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--aviso); background: rgba(245, 184, 76, .08); border: 1px solid rgba(245, 184, 76, .2); border-radius: var(--raio-p); padding: 10px 12px; margin: 10px 0; }
+.aviso-estoque svg { width: 18px; height: 18px; flex-shrink: 0; }
+.cartao-compras { display: block; margin-bottom: 4px; }
+.cartao-compras.tem .link-cab { color: var(--aviso); font-weight: 700; }
+.cartao-estoque { display: block; }
+.cartao-estoque p { margin: 6px 0 0; }
+.mov { gap: 10px; }
+.mov b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mov-menos { color: var(--texto-2); }
+.mov-mais { color: var(--destaque); }
+.mov.estornado .item-texto strong, .mov.estornado b { text-decoration: line-through; opacity: .55; }
+.icon-btn.pequeno { width: 34px; height: 34px; flex-shrink: 0; }
+.icon-btn.pequeno svg { width: 16px; height: 16px; }
+.item-compra small b { color: var(--texto); }
+.vinculos { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip.vinculo { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: var(--texto); max-width: 100%; }
+.chip.vinculo button { border: 0; background: none; color: var(--texto-2); padding: 0; display: inline-flex; cursor: pointer; }
+.chip.vinculo button svg { width: 14px; height: 14px; }
+.linha-toggle { flex-direction: row !important; align-items: center; gap: 10px !important; color: var(--texto) !important; font-weight: 500 !important; }
+.linha-toggle input { width: 20px; height: 20px; accent-color: var(--destaque); flex-shrink: 0; }
+.campo-unidade { position: relative; display: block; }
+.campo-unidade .campo { padding-right: 40px; width: 100%; }
+.campo-unidade i { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--texto-2); font-weight: 500; pointer-events: none; }

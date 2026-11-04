@@ -46,7 +46,7 @@ function itemAlimento(a, i) {
 // aoEscolherRefeicao(refeicaoSalva) idem. Fica aberta para adicionar vários.
 // refeicaoNome: as refeições salvas mostradas são só as que contêm esse nome
 // ("Almoço" mostra "Almoço" e "Almoço dia off"), com opção de ver todas.
-export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, aoEscolherRefeicao = null, refeicaoNome = '' }) {
+export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, aoEscolherRefeicao = null, refeicaoNome = '', rapido = true }) {
   return folha({
     titulo, classe: 'modal-alto',
     conteudo: (corpo, fechar) => {
@@ -66,7 +66,7 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
             <button class="chip" data-aba="meus">Meus alimentos</button>
           </div>
         </div>
-        <button class="item-alimento item-criar item-rapido" data-rapido><span class="item-add">${Icone.mais}</span><span class="item-texto"><strong>Adição rápida</strong><small>Só as calorias, ou calorias e macros, sem escolher alimento</small></span></button>
+        ${rapido ? `<button class="item-alimento item-criar item-rapido" data-rapido><span class="item-add">${Icone.mais}</span><span class="item-texto"><strong>Adição rápida</strong><small>Só as calorias, ou calorias e macros, sem escolher alimento</small></span></button>` : ''}
         <div class="lista-exercicios" data-lista></div>
         <div class="rodape-fixo"><button class="btn btn-primario btn-bloco" data-pronto>Concluir</button></div>`;
       const el = corpo.querySelector('[data-lista]');
@@ -194,7 +194,8 @@ export function escolherAlimentos({ titulo = 'Adicionar alimento', aoEscolher, a
           desenhar();
         }
       });
-      corpo.querySelector('[data-rapido]').onclick = async () => {
+      const btnRapido = corpo.querySelector('[data-rapido]');
+      if (btnRapido) btnRapido.onclick = async () => {
         if (await aoEscolher(alimentoRapido())) { adicionados++; pronto.textContent = `Concluir (${adicionados})`; }
       };
       pronto.onclick = () => fechar(adicionados);

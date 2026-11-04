@@ -12,6 +12,7 @@ import './treino/historico.js';
 import './treino/progresso.js';
 import './dieta/dieta.js';
 import './dieta/gasto.js';
+import './estoque/estoque.js';
 import './resumo.js';
 import './corpo/corpo.js';
 import './perfil/perfil.js';

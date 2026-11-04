@@ -87,5 +87,9 @@ select public.app_criar_tabela('refeicoes');     -- refeições salvas (combina�
 select public.app_criar_tabela('dieta_config');  -- refeições do dia e metas (treino / off)
 select public.app_criar_tabela('dieta_dias');    -- tipo de cada dia: treino ou off
 
+-- ---------- Tabelas do estoque de casa (também em estoque.sql) ----------
+select public.app_criar_tabela('estoque');
+select public.app_criar_tabela('estoque_mov');
+
 -- Segurança extra: só o dono do banco pode executar a função de criação
 revoke execute on function public.app_criar_tabela(text) from public, anon, authenticated;
