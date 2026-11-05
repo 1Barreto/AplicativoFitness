@@ -48,14 +48,30 @@ export function fmtVolume(kg) {
   return `${nf.format(Math.round(kg))} kg`;
 }
 
+// Formatadores de data guardados: toLocaleDateString com opções cria um formatador
+// novo a cada chamada (lento em listas e gráficos com centenas de datas).
+// Use só com opções que tenham algum campo de data ou hora (dia, mês, ano, hora...).
+const formatadores = new Map();
+export function fmtLocal(d, opts, locale = 'pt-BR') {
+  const k = locale + JSON.stringify(opts);
+  let f = formatadores.get(k);
+  if (!f) formatadores.set(k, f = new Intl.DateTimeFormat(locale, opts));
+  const data = d instanceof Date ? d : new Date(d);
+  return isNaN(data) ? 'Invalid Date' : f.format(data);
+}
+// Mesmo resultado de a.localeCompare(b, 'pt-BR'), sem criar um comparador por chamada
+// (criado só no primeiro uso, para não pesar na abertura do app)
+let colador = null;
+export const compararTexto = (a, b) => (colador ||= new Intl.Collator('pt-BR')).compare(a, b);
+
 export function fmtData(iso, opts = { day: '2-digit', month: 'short', year: 'numeric' }) {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('pt-BR', opts);
+  return fmtLocal(iso, opts);
 }
 export function fmtDataHora(iso) {
   if (!iso) return '';
   const d = new Date(iso);
-  return `${d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })} · ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  return `${fmtLocal(d, { weekday: 'short', day: '2-digit', month: 'short' })} · ${fmtLocal(d, { hour: '2-digit', minute: '2-digit' })}`;
 }
 export function fmtRelativo(iso) {
   if (!iso) return '';

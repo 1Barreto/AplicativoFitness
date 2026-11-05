@@ -2,7 +2,7 @@
 // recordes e histórico. As telas usam só estas funções.
 
 import { DB } from '../../core/db.js';
-import { e1rm, normalizar, Bus } from '../../core/util.js';
+import { e1rm, normalizar, Bus, compararTexto } from '../../core/util.js';
 import { EXERCICIOS_BASE } from './exercicios-base.js';
 
 export const T = { EXERCICIOS: 'exercicios', ROTINAS: 'rotinas', TREINOS: 'treinos' };
@@ -40,7 +40,7 @@ export async function listarExercicios() {
   const porId = new Map(salvos.map(e => [e.id, e]));
   const base = EXERCICIOS_BASE.map(b => ({ ...b, ...(porId.get(b.id) || {}), base: true }));
   const personalizados = salvos.filter(e => !EXERCICIOS_BASE.some(b => b.id === e.id)).map(e => ({ tipo: 'peso_reps', ...e, base: false }));
-  return [...base, ...personalizados].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  return [...base, ...personalizados].sort((a, b) => compararTexto(a.nome, b.nome));
 }
 
 let mapaExercicios = null;
@@ -81,7 +81,7 @@ export function descansoDe(ex) {
 // ---------- Rotinas ----------
 export async function listarRotinas() {
   const r = await DB.todos(T.ROTINAS);
-  return r.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  return r.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || compararTexto(a.nome, b.nome));
 }
 export const obterRotina = id => DB.obter(T.ROTINAS, id);
 export const salvarRotina = r => DB.salvar(T.ROTINAS, r);

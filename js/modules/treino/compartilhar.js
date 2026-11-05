@@ -1,7 +1,7 @@
 // Imagem do treino para compartilhar (Stories, WhatsApp): um cartão 1080 × 1350
 // desenhado num canvas com o resumo, os exercícios e os recordes.
 
-import { esc, fmtNum, fmtDuracao, fmtVolume } from '../../core/util.js';
+import { esc, fmtNum, fmtDuracao, fmtVolume, fmtLocal } from '../../core/util.js';
 import { folha, toast, Icone } from '../../core/ui.js';
 import { resumoTreino, melhoresDeSeries } from './dados.js';
 
@@ -48,7 +48,7 @@ export async function gerarImagem(t, mapa, recordes) {
   let y = M + 40;
 
   f(700, 30); ctx.fillStyle = destaque;
-  ctx.fillText(new Date(t.inicio).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase(), M, y);
+  ctx.fillText(fmtLocal(new Date(t.inicio), { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase(), M, y);
   y += 90;
   f(800, 80); ctx.fillStyle = '#fff';
   ctx.fillText(caber(ctx, t.nome || 'Treino', L - 2 * M), M, y);

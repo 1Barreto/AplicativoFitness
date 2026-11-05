@@ -4,6 +4,7 @@
 
 import { Modulos } from '../core/modulos.js';
 import { Icone, definirTitulo } from '../core/ui.js';
+import { fmtLocal } from '../core/util.js';
 
 function saudacao() {
   const h = new Date().getHours();
@@ -12,7 +13,7 @@ function saudacao() {
 
 async function telaHoje(el) {
   definirTitulo('Hoje');
-  const d = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const d = fmtLocal(new Date(), { weekday: 'long', day: 'numeric', month: 'long' });
   const data = d.charAt(0).toUpperCase() + d.slice(1);
   el.innerHTML = `
     <div class="saudacao"><h2>${saudacao()}!</h2><p class="sutil">${data}</p></div>
@@ -40,5 +41,5 @@ async function telaHoje(el) {
 Modulos.registrar({
   id: 'hoje',
   aba: { rota: '/hoje', nome: 'Hoje', icone: Icone.hoje, ordem: 10 },
-  rotas: { '/hoje': telaHoje },
+  rotas: { '/hoje': { view: telaHoje, dependeDaConta: false } }, // só dados do aparelho
 });

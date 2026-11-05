@@ -2,11 +2,11 @@
 // personalizados, refeições salvas e metas. Alimentos da TBCA-USP.
 
 import { Modulos } from '../../core/modulos.js';
-import { esc, fmtNum, clone, normalizar } from '../../core/util.js';
+import { esc, fmtNum, clone, normalizar, fmtLocal } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio, folha } from '../../core/ui.js';
 import { pesoAtual } from '../corpo/dados.js';
 import {
-  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, comMetas, proximaMudancaMetas, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, excluirItem, novoItem,
+  T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, comMetas, proximaMudancaMetas, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, salvarItens, excluirItem, excluirItens, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
   copiaAlimento, rotuloDia, calcular, somar, fmtKcal, fmtG, fmtQtd, MACROS, refeicoesDoTipo, planoDe, comPlano, aplicarPlano,
 } from './dados.js';
@@ -208,7 +208,7 @@ async function telaDieta(el, _p, query) {
   });
   el.querySelectorAll('[data-acao=metas]').forEach(b => b.onclick = async () => {
     const peso = (await pesoAtual())?.valor;
-    const fmtD = d => dataDe(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const fmtD = d => fmtLocal(dataDe(d), { day: '2-digit', month: '2-digit' });
     const desde = fmtD(dia);
     const ate = proximaMudancaMetas(config, dia);
     const novas = await formularioMetas(todasMetas, peso, tipoDia.tipo, `Vale a partir de ${dia === hojeISO() ? 'hoje' : desde}${ate ? ` até ${fmtD(somarDias(ate, -1))} (dia ${fmtD(ate)} já tem outra meta)` : ''}. Os dias anteriores mantêm as metas que tinham.`);
@@ -245,7 +245,7 @@ async function telaDieta(el, _p, query) {
   el.querySelector('[data-acao=copiar-dia]')?.addEventListener('click', async () => {
     const ontem = await itensDoDia(somarDias(dia, -1));
     if (!ontem.length) { toast('O dia anterior não tem registros'); return; }
-    for (const i of ontem) { const { id, created_at, updated_at, feito, ...resto } = i; await salvarItem({ ...resto, dia }); }
+    await salvarItens(ontem.map(({ id, created_at, updated_at, feito, ...resto }) => ({ ...resto, dia })));
     toast(`${ontem.length} ${ontem.length === 1 ? 'item copiado' : 'itens copiados'}`, 'sucesso'); recarregar();
   });
 
@@ -299,7 +299,7 @@ async function telaDieta(el, _p, query) {
       } else if (op === 'copiar') {
         const ant = (await itensDoDia(somarDias(dia, -1))).filter(i => i.refeicao === ref.id);
         if (!ant.length) { toast(`Nada em ${ref.nome} no dia anterior`); return; }
-        for (const i of ant) { const { id, created_at, updated_at, feito, ...resto } = i; await salvarItem({ ...resto, dia }); }
+        await salvarItens(ant.map(({ id, created_at, updated_at, feito, ...resto }) => ({ ...resto, dia })));
         toast(`${ant.length} ${ant.length === 1 ? 'item copiado' : 'itens copiados'}`, 'sucesso'); recarregar();
       } else if (op === 'renomear') {
         const nome = await pedirTexto('Renomear refeição', ref.nome);
@@ -307,7 +307,7 @@ async function telaDieta(el, _p, query) {
         await salvarConfig({ ...config, refeicoes: config.refeicoes.map(r => (r.id === ref.id ? { ...r, nome } : r)) });
         recarregar();
       } else if (op === 'limpar' && await confirmar(`Remover os ${lista.length} itens de ${esc(ref.nome)}?`, { ok: 'Limpar', perigo: true })) {
-        for (const i of lista) await excluirItem(i.id);
+        await excluirItens(lista.map(i => i.id));
         recarregar();
       }
     });
@@ -329,7 +329,7 @@ async function adicionarAlimentos({ dia, refeicao, feito = false }) {
       return true;
     },
     aoEscolherRefeicao: async (salva) => {
-      for (const i of salva.itens) await salvarItem({ ...novoItem(i.alimento, i.gramas, { dia, refeicao: refeicao.id, porcao: i.porcao }), feito, ordem: ordem++ });
+      await salvarItens(salva.itens.map(i => ({ ...novoItem(i.alimento, i.gramas, { dia, refeicao: refeicao.id, porcao: i.porcao }), feito, ordem: ordem++ })));
       toast(`${esc(salva.nome)} adicionada`, 'sucesso', 1400);
       return true;
     },
@@ -689,7 +689,7 @@ async function cartaoProximaRefeicao(el) {
   el.querySelector('[data-acao=add]')?.addEventListener('click', async () => { if (await adicionarAlimentos({ dia: hoje, refeicao: prox })) redesenhar(); });
   el.querySelector('[data-acao=repetir]')?.addEventListener('click', async () => {
     let ordem = Date.now();
-    for (const i of ultima.itens) { const { id, created_at, updated_at, feito, ...resto } = i; await salvarItem({ ...resto, dia: hoje, feito: true, ordem: ordem++ }); }
+    await salvarItens(ultima.itens.map(({ id, created_at, updated_at, feito, ...resto }) => ({ ...resto, dia: hoje, feito: true, ordem: ordem++ })));
     toast(`Refeição registrada: ${esc(prox.nome)}`, 'sucesso');
     redesenhar();
   });

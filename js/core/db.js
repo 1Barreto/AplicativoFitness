@@ -12,6 +12,10 @@ const NOME = 'aplicativo';
 const VERSAO = 1;
 let conexao = null;
 const cache = new Map(); // tabela -> Map(id -> registro)
+const ativos = new Map(); // tabela -> lista sem os excluídos (refeita só quando a tabela muda)
+const versoes = new Map(); // tabela -> contador de alterações (para caches dos módulos)
+let epoca = 0; // muda ao apagar tudo
+const mudou = tabela => { ativos.delete(tabela); versoes.set(tabela, (versoes.get(tabela) || 0) + 1); };
 
 function abrir() {
   if (conexao) return Promise.resolve(conexao);
@@ -62,27 +66,46 @@ async function carregarTabela(tabela) {
 export const DB = {
   abrir,
 
-  // Lista os registros (sem os excluídos, a menos que pedido).
+  // Lista os registros (sem os excluídos, a menos que pedido). Sempre uma lista
+  // nova (quem chama pode ordenar), mas o filtro só é refeito quando a tabela muda.
   async todos(tabela, { incluirExcluidos = false } = {}) {
     const mapa = await carregarTabela(tabela);
-    const lista = [...mapa.values()];
-    return incluirExcluidos ? lista : lista.filter(r => !r.deleted);
+    if (incluirExcluidos) return [...mapa.values()];
+    let lista = ativos.get(tabela);
+    if (!lista) ativos.set(tabela, lista = [...mapa.values()].filter(r => !r.deleted));
+    return lista.slice();
   },
 
-  async obter(tabela, id) {
+  async obter(tabela, id, { incluirExcluidos = false } = {}) {
     const mapa = await carregarTabela(tabela);
     const r = mapa.get(id);
-    return r && !r.deleted ? r : null;
+    return r && (incluirExcluidos || !r.deleted) ? r : null;
   },
+
+  // Muda sempre que a tabela muda: permite aos módulos guardar contas prontas.
+  versao: tabela => `${epoca}:${versoes.get(tabela) || 0}`,
 
   // Salva (cria ou atualiza) um registro feito pelo usuário. Marca como pendente de envio.
   async salvar(tabela, dados) {
-    const reg = { ...dados, id: dados.id || uuid(), updated_at: agoraISO(), deleted: !!dados.deleted };
-    if (!reg.created_at) reg.created_at = reg.updated_at;
-    await tx('registros', 'readwrite', s => s.put(empacotar(tabela, reg, true)));
-    (await carregarTabela(tabela)).set(reg.id, reg);
-    Bus.emit('dados:alterados', { tabela, id: reg.id, local: true });
-    return reg;
+    return (await DB.salvarVarios(tabela, [dados]))[0];
+  },
+
+  // Vários registros de uma vez, numa gravação só (ex.: marcar uma refeição inteira
+  // como feita). Cada registro avisa os módulos como se fosse salvo sozinho.
+  async salvarVarios(tabela, lista) {
+    if (!lista.length) return [];
+    const agora = agoraISO();
+    const regs = lista.map(dados => {
+      const reg = { ...dados, id: dados.id || uuid(), updated_at: agora, deleted: !!dados.deleted };
+      if (!reg.created_at) reg.created_at = reg.updated_at;
+      return reg;
+    });
+    await tx('registros', 'readwrite', s => { regs.forEach(reg => s.put(empacotar(tabela, reg, true))); });
+    const mapa = await carregarTabela(tabela);
+    regs.forEach(reg => mapa.set(reg.id, reg));
+    mudou(tabela);
+    regs.forEach(reg => Bus.emit('dados:alterados', { tabela, id: reg.id, local: true }));
+    return regs;
   },
 
   // Exclusão lógica: o registro continua existindo com deleted = true,
@@ -94,6 +117,11 @@ export const DB = {
     return DB.salvar(tabela, { ...atual, deleted: true });
   },
 
+  async excluirVarios(tabela, ids) {
+    const mapa = await carregarTabela(tabela);
+    return DB.salvarVarios(tabela, ids.map(id => mapa.get(id)).filter(Boolean).map(r => ({ ...r, deleted: true })));
+  },
+
   // Grava registros vindos do servidor (não marca como pendente) ou de um
   // backup importado (marca como pendente para subir ao servidor).
   async gravarRemotos(tabela, regs, { pendente = false } = {}) {
@@ -101,6 +129,7 @@ export const DB = {
     const mapa = await carregarTabela(tabela);
     await tx('registros', 'readwrite', s => { regs.forEach(r => s.put(empacotar(tabela, r, pendente))); });
     regs.forEach(r => mapa.set(r.id, r));
+    mudou(tabela);
     Bus.emit('dados:alterados', { tabela, local: pendente });
   },
 
@@ -151,6 +180,8 @@ export const DB = {
     await tx('registros', 'readwrite', s => s.clear());
     await tx('meta', 'readwrite', s => s.clear());
     cache.clear();
+    ativos.clear();
+    epoca++;
     Bus.emit('dados:alterados', { tabela: '*' });
   },
 
