@@ -45,7 +45,7 @@ function semanasSeguidas(treinos) {
 
 async function telaPerfil(el) {
   definirTitulo('Perfil');
-  const [treinos, mapa, recordes, medidas, perfil] = await Promise.all([listarTreinos(), mapaDeExercicios(), mapaDeRecordes(), listarMedidas(), meuPerfil().catch(() => null)]);
+  const [treinos, mapa, recordes, medidas, perfil] = await Promise.all([listarTreinos(), mapaDeExercicios(), mapaDeRecordes(), listarMedidas(), meuPerfil({ esperar: false }).catch(() => null)]);
   const usuario = Auth.usuario();
   const nome = perfil?.nome || usuario?.email?.split('@')[0] || 'Meu perfil';
   const foto = fotoValida(perfil?.foto);

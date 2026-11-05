@@ -40,21 +40,32 @@ function cliente() {
 
 // ---------- Perfil ----------
 // O id do perfil é o id da conta: cada pessoa tem um só.
-export async function meuPerfil() {
+// esperar: false devolve na hora o que há no aparelho; se ainda não houver, busca
+// na nuvem em segundo plano (quando chegar, a tela se redesenha sozinha).
+const buscasPerfil = new Map(); // conta -> consulta à nuvem (uma por abertura do app)
+export async function meuPerfil({ esperar = true } = {}) {
   const u = Auth.usuario();
   if (!u) return null;
   const local = await DB.obter(TF.PERFIS, u.id);
   if (local) return local;
   // Aparelho novo: o perfil pode já existir na nuvem e a sincronização ainda não ter chegado
-  try {
-    const { data, error } = await Auth.cliente().from(TF.PERFIS).select('id, updated_at, deleted, data').eq('id', u.id).maybeSingle();
-    if (!error && data && !data.deleted) {
-      const reg = { ...(data.data || {}), id: data.id, updated_at: data.updated_at, deleted: false };
-      await DB.gravarRemotos(TF.PERFIS, [reg]);
-      return reg;
-    }
-  } catch { /* offline */ }
-  return null;
+  if (!buscasPerfil.has(u.id)) {
+    const busca = (async () => {
+      try {
+        const { data, error } = await Auth.cliente().from(TF.PERFIS).select('id, updated_at, deleted, data').eq('id', u.id).maybeSingle();
+        if (error) { buscasPerfil.delete(u.id); return null; } // tenta de novo na próxima
+        if (data && !data.deleted) {
+          const reg = { ...(data.data || {}), id: data.id, updated_at: data.updated_at, deleted: false };
+          await DB.gravarRemotos(TF.PERFIS, [reg]);
+          return reg;
+        }
+      } catch { buscasPerfil.delete(u.id); } // offline
+      return null;
+    })();
+    buscasPerfil.set(u.id, busca);
+  }
+  if (!esperar) return null;
+  return (await buscasPerfil.get(u.id)) || DB.obter(TF.PERFIS, u.id);
 }
 export async function salvarNome(nome) {
   const u = Auth.usuario();
