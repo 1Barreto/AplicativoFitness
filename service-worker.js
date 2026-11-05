@@ -9,10 +9,13 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v104';
+const VERSAO = 'v105';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
-const CACHE_FOTOS = 'fotos-v1'; // fotos dos exercícios (não mudam)
+const CACHE_FOTOS = 'fotos-v2'; // fotos dos exercícios (não mudam)
+const CACHE_PESSOAS = 'pessoas-v1'; // fotos de perfil e das publicações do Feed (com limite)
+const LIMITE_PESSOAS = 200; // fotos guardadas; passou disso, saem as mais antigas (uns 30 MB no máximo)
+const STORAGE_FOTOS = /\/storage\/v1\/object\/public\/(avatares|fotos-feed)\//;
 
 const ARQUIVOS = [
   './',
@@ -91,8 +94,46 @@ self.addEventListener('activate', (event) => {
     const nomes = await caches.keys();
     await Promise.all(nomes.filter(n => n.startsWith('app-') && n !== CACHE_APP).map(n => caches.delete(n)));
     await self.clients.claim();
+    await limparCachesAntigos();
   })());
 });
+
+// Respostas "opacas" (de outro site, sem CORS) ocupam uns 7 MB cada na conta de
+// espaço do navegador, mesmo uma foto de 20 KB. Por isso as fotos e bibliotecas
+// de fora agora são pedidas com CORS; as guardadas do jeito antigo saem do cache.
+async function limparCachesAntigos() {
+  if (await caches.has('fotos-v1')) {
+    const velho = await caches.open('fotos-v1'), novo = await caches.open(CACHE_FOTOS);
+    for (const k of await velho.keys()) {
+      if (STORAGE_FOTOS.test(new URL(k.url).pathname)) continue; // vão para o cache com limite
+      const r = await velho.match(k);
+      if (r && r.type !== 'opaque') await novo.put(k, r);
+    }
+    await caches.delete('fotos-v1');
+  }
+  const cdn = await caches.open(CACHE_CDN);
+  for (const k of await cdn.keys()) { const r = await cdn.match(k); if (r?.type === 'opaque') await cdn.delete(k); }
+}
+
+// Busca de fora pedindo CORS (resposta normal, ocupa só o tamanho real);
+// se o site não aceitar, busca do jeito comum.
+async function buscarDeFora(req) {
+  try { const r = await fetch(req.url, { mode: 'cors', credentials: 'omit' }); if (r.ok) return r; } catch { /* sem CORS */ }
+  return fetch(req);
+}
+
+// Guarda uma foto de pessoa: tira as versões antigas da mesma foto (a pessoa
+// trocou a foto, o "?v=" mudou) e, passando do limite, as guardadas há mais tempo.
+async function guardarFotoPessoa(req, resp) {
+  const cache = await caches.open(CACHE_PESSOAS);
+  await cache.put(req, resp);
+  const caminho = new URL(req.url).pathname;
+  const chaves = await cache.keys();
+  const velhas = chaves.filter(k => k.url !== req.url && new URL(k.url).pathname === caminho);
+  const resto = chaves.filter(k => !velhas.includes(k));
+  const sobra = resto.length - LIMITE_PESSOAS;
+  await Promise.all([...velhas, ...(sobra > 0 ? resto.slice(0, sobra) : [])].map(k => cache.delete(k)));
+}
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -101,14 +142,13 @@ self.addEventListener('fetch', (event) => {
 
   // Fotos de perfil e das publicações (Storage público): cada troca de foto muda o "?v=" do
   // endereço, então dá para guardar para sempre e abrir na hora.
-  const avatar = url.hostname.endsWith('.supabase.co') && /\/storage\/v1\/object\/public\/(avatares|fotos-feed)\//.test(url.pathname);
+  const avatar = url.hostname.endsWith('.supabase.co') && STORAGE_FOTOS.test(url.pathname);
   if (avatar) {
     event.respondWith((async () => {
-      const cache = await caches.open(CACHE_FOTOS);
-      const emCache = await cache.match(req);
+      const emCache = await (await caches.open(CACHE_PESSOAS)).match(req);
       if (emCache) return emCache;
-      const resp = await fetch(req);
-      if (resp.ok || resp.type === 'opaque') cache.put(req, resp.clone());
+      const resp = await buscarDeFora(req);
+      if (resp.ok || resp.type === 'opaque') event.waitUntil(guardarFotoPessoa(req, resp.clone()).catch(() => {}));
       return resp;
     })());
     return;
@@ -124,7 +164,7 @@ self.addEventListener('fetch', (event) => {
       const cache = await caches.open(foto ? CACHE_FOTOS : CACHE_CDN);
       const emCache = await cache.match(req);
       if (emCache) return emCache;
-      const resp = await fetch(req);
+      const resp = url.origin === self.location.origin ? await fetch(req) : await buscarDeFora(req);
       if (resp.ok || resp.type === 'opaque') cache.put(req, resp.clone());
       return resp;
     })());
