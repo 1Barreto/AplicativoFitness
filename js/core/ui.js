@@ -61,7 +61,13 @@ export function toast(msg, tipo = 'info', ms = 2600) {
   const el = document.createElement('div');
   el.className = `toast toast-${tipo}`;
   el.innerHTML = msg;
-  document.getElementById('toasts').appendChild(el);
+  const caixa = document.getElementById('toasts');
+  // Na sessão de treino o cabeçalho fixo é mais alto que a barra do topo:
+  // o aviso desce para logo abaixo dele, sem ficar escondido por trás.
+  const topoSessao = document.querySelector('.sessao-topo-fixa');
+  const fundoTopo = topoSessao?.offsetParent ? topoSessao.getBoundingClientRect().bottom : 0;
+  caixa.style.top = fundoTopo ? `${Math.round(fundoTopo + 8)}px` : '';
+  caixa.appendChild(el);
   requestAnimationFrame(() => el.classList.add('visivel'));
   setTimeout(() => { el.classList.remove('visivel'); setTimeout(() => el.remove(), 300); }, ms);
 }
