@@ -41,5 +41,5 @@ async function telaHoje(el) {
 Modulos.registrar({
   id: 'hoje',
   aba: { rota: '/hoje', nome: 'Hoje', icone: Icone.hoje, ordem: 10 },
-  rotas: { '/hoje': telaHoje },
+  rotas: { '/hoje': { view: telaHoje, dependeDaConta: false } }, // só dados do aparelho
 });

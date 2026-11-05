@@ -15,7 +15,8 @@ export const Modulos = {
    * @param {{rota:string, nome:string, icone:string, ordem:number, inclui?:string[]}} [m.aba]  aba na barra inferior
    *        (inclui: outras rotas que também deixam esta aba destacada)
    * @param {string[]} [m.tabelas]   tabelas sincronizadas com o Supabase
-   * @param {Object<string, Function|{view:Function, recarregar?:boolean}>} [m.rotas]
+   * @param {Object<string, Function|{view:Function, recarregar?:boolean, dependeDaConta?:boolean}>} [m.rotas]
+   *        (dependeDaConta: false = não redesenha ao entrar ou sair da conta)
    * @param {{ordem:number, render:Function}[]} [m.cartoesHoje]
    */
   registrar(m) {

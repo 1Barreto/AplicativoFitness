@@ -13,6 +13,7 @@ import './modules/index.js';
 const conteudo = document.getElementById('conteudo');
 let limpezaAtual = null;
 let rotaAtual = null;
+let usuarioDaTela = null; // conta com que a tela atual foi desenhada
 let contadorRender = 0;
 
 function caminhoAtual() {
@@ -30,6 +31,7 @@ async function renderizar({ preservarRolagem = false } = {}) {
   if (typeof limpezaAtual === 'function') { try { limpezaAtual(); } catch (e) { console.error(e); } }
   limpezaAtual = null;
   rotaAtual = rota;
+  usuarioDaTela = Auth.usuario()?.id || null;
 
   const dentro = (r) => caminho === r || caminho.startsWith(r + '/');
   document.querySelectorAll('.tabbar a').forEach(a => {
@@ -127,7 +129,16 @@ async function iniciar() {
   // Dados novos vindos de outro aparelho: atualiza a tela atual (se ela permitir)
   const recarregar = debounce(() => { if (rotaAtual && rotaAtual.recarregar !== false) renderizar({ preservarRolagem: true }); }, 300);
   Bus.on('dados:alterados', ({ local }) => { if (!local) recarregar(); });
-  Bus.on('auth:mudou', () => { if (rotaAtual && rotaAtual.recarregar !== false) renderizar({ preservarRolagem: true }); });
+  // Entrou ou saiu da conta: redesenha a tela, se ela depender da conta. Ao abrir o
+  // app, o login termina logo depois da primeira tela; a Hoje só mostra dados do
+  // aparelho, então não precisa ser montada de novo (os dados que chegarem da
+  // nuvem redesenham pelo "dados:alterados").
+  Bus.on('auth:mudou', () => {
+    const usuario = Auth.usuario()?.id || null;
+    if (!rotaAtual || usuario === usuarioDaTela) return;
+    usuarioDaTela = usuario;
+    if (rotaAtual.recarregar !== false && rotaAtual.dependeDaConta !== false) renderizar({ preservarRolagem: true });
+  });
   // App aberto em segundo plano de um dia para o outro (comum no iPhone): ao voltar,
   // redesenha para "Hoje" e a dieta não continuarem no dia anterior.
   let diaDaTela = dataInput();
