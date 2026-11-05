@@ -211,6 +211,7 @@ async function telaFeed(el) {
   const lista = el.querySelector('[data-lista]');
   const rodape = el.querySelector('[data-rodape]');
   const posts = new Map();
+  let ultimoHtml = null;
   let estado = caches[tipo] ? { ...caches[tipo] } : null;
   let parado = false;
   const guardar = () => { caches[tipo] = { ...estado }; salvarNoAparelho(); };
@@ -218,7 +219,9 @@ async function telaFeed(el) {
   const desenhar = () => {
     posts.clear();
     estado.posts.forEach(p => posts.set(p.id, p));
-    lista.innerHTML = estado.posts.length ? estado.posts.map(cartaoPost).join('') : vazio(tipo === 'treino' ? Icone.treino : Icone.dieta, ...VAZIO[tipo]);
+    const html = estado.posts.length ? estado.posts.map(cartaoPost).join('') : vazio(tipo === 'treino' ? Icone.treino : Icone.dieta, ...VAZIO[tipo]);
+    // Nada mudou desde o último desenho: não recria a lista (as fotos não piscam)
+    if (html !== ultimoHtml) { lista.innerHTML = html; ultimoHtml = html; }
     rodape.innerHTML = estado.temMais ? '<button class="btn btn-secundario" data-mais>Carregar mais</button>' : '';
   };
   ligarAcoes(lista, posts, { aoRemover: p => { estado.posts = estado.posts.filter(x => x.id !== p.id); guardar(); desenhar(); } });
@@ -267,7 +270,7 @@ async function telaFeed(el) {
     try { localStorage.setItem('feedAba', tipo); } catch { /* sem armazenamento */ }
     el.querySelectorAll('[data-aba]').forEach(x => { const a = x === b; x.classList.toggle('ativo', a); x.setAttribute('aria-selected', a); });
     estado = doCache(tipo) ? { ...caches[tipo] } : null;
-    if (estado) desenhar(); else { posts.clear(); lista.innerHTML = ESQUELETO; rodape.innerHTML = ''; }
+    if (estado) desenhar(); else { posts.clear(); lista.innerHTML = ESQUELETO; ultimoHtml = null; rodape.innerHTML = ''; }
     atualizar();
   });
 

@@ -9,8 +9,10 @@ import { salvarFoto, removerFoto } from './dados.js';
 const inicial = nome => esc((nome || '?').trim()[0]?.toUpperCase() || '?');
 
 // Foto do perfil (se tiver) ou a inicial do nome. Se a foto não carregar, volta para a inicial.
+// Sem "lazy": a foto é pequena e fica guardada no aparelho (service worker),
+// e "decoding=sync" evita o quadro vazio quando a lista é redesenhada.
 export const avatarPessoa = (nome, classe = '', foto = null) => foto
-  ? `<span class="avatar-ex avatar-pessoa com-foto ${classe}" data-i="${inicial(nome)}"><img src="${esc(foto)}" alt="" loading="lazy" decoding="async" onerror="const a=this.parentNode;a.classList.remove('com-foto');a.textContent=a.dataset.i"></span>`
+  ? `<span class="avatar-ex avatar-pessoa com-foto ${classe}" data-i="${inicial(nome)}"><img src="${esc(foto)}" alt="" decoding="sync" onerror="const a=this.parentNode;a.classList.remove('com-foto');a.textContent=a.dataset.i"></span>`
   : `<span class="avatar-ex avatar-pessoa ${classe}">${inicial(nome)}</span>`;
 
 // Liga um <input type="file"> à troca da foto. aoMudar(foto|null) é chamado
