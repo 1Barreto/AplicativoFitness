@@ -13,6 +13,7 @@ css/style.css            Todo o visual: mobile-first, modo escuro automático, s
 supabase/schema.sql      SQL das tabelas, gatilho de conflito e Row Level Security
 supabase/otimizacao.sql  Funções e índices que deixam a sincronização e o Feed mais rápidos (opcional)
 supabase/foto-perfil.sql Pasta de fotos de perfil no Storage + foto no Feed (rodar uma vez)
+supabase/fotos-feed.sql  Pasta de fotos das publicações do Feed no Storage (rodar uma vez)
 
 js/config.js             ⚠️ URL e chave anon do Supabase (único arquivo que você precisa editar)
 js/app.js                Ponto de entrada: abre o banco, inicia login/sync, monta abas e rotas

@@ -12,6 +12,7 @@ import { avatarPessoa } from './foto-perfil.js';
 import {
   TF, FeedIndisponivel, meuPerfil, salvarNome, listarFeed, obterPost, curtir, quemCurtiu,
   listarComentarios, comentar, apagarComentario, removerPublicacao,
+  fotoPostValida, salvarFotoPost, removerFotoPost,
 } from './dados.js';
 
 // ---------- Formatação ----------
@@ -50,7 +51,17 @@ function botoesAcao(p) {
     <button class="post-acao ${p.curti ? 'ativo' : ''}" data-curtir="${p.id}" aria-pressed="${p.curti}" aria-label="Curtir">
       ${p.curti ? Icone.coracaoCheio : Icone.coracao}<span>${p.curtidas || ''}</span></button>
     <a class="post-acao" href="#/feed/${p.id}?comentar=1" aria-label="Comentar">${Icone.comentario}<span>${p.comentarios || ''}</span></a>
+    ${p.meu ? `<label class="post-acao post-acao-foto" aria-label="${p.foto ? 'Trocar foto' : 'Adicionar foto'}">${Icone.camera}<span>${p.foto ? '' : 'Foto'}</span>
+      <input type="file" accept="image/*" hidden data-foto-post="${p.id}"></label>` : ''}
   </div>`;
+}
+
+// Foto da publicação (opcional). width/height reservam o espaço antes de carregar.
+function fotoPost(p, classe = '') {
+  const url = fotoPostValida(p.foto);
+  if (!url) return '';
+  const tam = p.fotoL && p.fotoA ? `width="${+p.fotoL}" height="${+p.fotoA}"` : '';
+  return `<img class="post-foto ${classe}" src="${esc(url)}" ${tam} alt="Foto de ${esc(p.nome || 'publicação')}" loading="lazy" decoding="async" onerror="this.remove()">`;
 }
 
 function cabecalho(p) {
@@ -88,6 +99,7 @@ function cartaoRefeicao(p) {
     ${cabecalho(p)}
     <a class="post-corpo" href="#/feed/${p.id}">
       <h3>${Icone.dieta}${tituloRefeicao(p)}</h3>
+      ${fotoPost(p)}
       ${macros(p)}
       <ul class="post-itens">${itens.slice(0, MAX_ITENS).map(linhaItem).join('')}</ul>
       ${itens.length > MAX_ITENS ? `<span class="post-mais">Ver mais ${itens.length - MAX_ITENS} alimento${itens.length - MAX_ITENS > 1 ? 's' : ''}</span>` : ''}
@@ -105,6 +117,7 @@ function cartaoPost(p) {
     <a class="post-corpo" href="#/feed/${p.id}">
       <h3>${esc(p.nome)}</h3>
       ${p.notas ? `<p class="post-notas">${esc(p.notas)}</p>` : ''}
+      ${fotoPost(p)}
       ${estatisticas(p)}
       <ul class="post-ex">${ex.slice(0, MAX_EX).map(e => `
         <li>${avatarExercicio(e, 'mini')}<span class="item-texto"><strong>${e.series.length} × ${esc(e.nome)}</strong>${melhorSerie(e) ? `<small>${melhorSerie(e)}</small>` : ''}</span></li>`).join('')}
@@ -116,7 +129,21 @@ function cartaoPost(p) {
 }
 
 // ---------- Ações comuns (curtir, menu da própria publicação) ----------
-function ligarAcoes(el, posts, { aoRemover } = {}) {
+function ligarAcoes(el, posts, { aoRemover, aoMudar } = {}) {
+  el.addEventListener('change', async ev => {
+    const input = ev.target.closest('[data-foto-post]'); if (!input) return;
+    const f = input.files[0]; input.value = '';
+    const p = posts.get(input.dataset.fotoPost); if (!f || !p) return;
+    const botao = input.closest('label');
+    botao.classList.add('enviando');
+    toast('Enviando foto…');
+    try {
+      Object.assign(p, await salvarFotoPost(p.id, f));
+      toast('Foto adicionada', 'sucesso');
+      aoMudar?.(p);
+    } catch (e) { toast(e.message, 'erro'); }
+    finally { botao.classList.remove('enviando'); }
+  });
   el.addEventListener('click', async ev => {
     const bc = ev.target.closest('[data-curtir]');
     if (bc) {
@@ -141,8 +168,13 @@ function ligarAcoes(el, posts, { aoRemover } = {}) {
       const refeicao = p.tipo === 'refeicao';
       const op = await menu(p.nome, [
         refeicao ? { texto: 'Ver na dieta', valor: 'ver', icone: Icone.dieta } : { texto: 'Ver no meu histórico', valor: 'ver', icone: Icone.historico },
+        ...(p.foto ? [{ texto: 'Remover foto', valor: 'sem-foto', icone: Icone.camera }] : []),
         { texto: 'Remover do feed', valor: 'remover', icone: Icone.lixo, perigo: true },
       ]);
+      if (op === 'sem-foto') {
+        try { await removerFotoPost(p.id); p.foto = null; toast('Foto removida'); aoMudar?.(p); } catch (e) { toast(e.message, 'erro'); }
+        return;
+      }
       if (op === 'ver') location.hash = refeicao ? `#/dieta?dia=${p.dia}` : `#/historico/${p.id}`;
       else if (op === 'remover' && await confirmar(refeicao ? 'Remover esta refeição do feed? Ela continua na sua dieta.' : 'Remover este treino do feed? Ele continua no seu histórico.', { ok: 'Remover', perigo: true })) {
         await removerPublicacao(p.id);
@@ -224,7 +256,10 @@ async function telaFeed(el) {
     if (html !== ultimoHtml) { lista.innerHTML = html; ultimoHtml = html; }
     rodape.innerHTML = estado.temMais ? '<button class="btn btn-secundario" data-mais>Carregar mais</button>' : '';
   };
-  ligarAcoes(lista, posts, { aoRemover: p => { estado.posts = estado.posts.filter(x => x.id !== p.id); guardar(); desenhar(); } });
+  ligarAcoes(lista, posts, {
+    aoRemover: p => { estado.posts = estado.posts.filter(x => x.id !== p.id); guardar(); desenhar(); },
+    aoMudar: () => { guardar(); desenhar(); },
+  });
   rodape.addEventListener('click', async ev => {
     const b = ev.target.closest('[data-mais]'); if (!b) return;
     b.disabled = true; b.textContent = 'Carregando…';
@@ -330,6 +365,7 @@ async function telaPost(el, { id }, query) {
       <h2 class="post-titulo">${esc(p.nome)}</h2>
       <p class="sutil">${fmtData(refeicao && p.dia ? `${p.dia}T12:00:00` : p.fim, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       ${p.notas ? `<p class="notas">${esc(p.notas)}</p>` : ''}
+      ${fotoPost(p, 'inteira')}
       ${refeicao ? macros(p) : estatisticas(p)}
       ${botoesAcao(p)}
       <button class="link-curtidas" data-curtidas ${p.curtidas ? '' : 'hidden'}>Ver quem curtiu</button>
@@ -356,7 +392,17 @@ async function telaPost(el, { id }, query) {
       <button class="btn btn-primario" aria-label="Enviar">Enviar</button>
     </form>`;
 
-  ligarAcoes(el, posts, { aoRemover: () => { location.hash = '#/feed'; } });
+  ligarAcoes(el, posts, {
+    aoRemover: () => { location.hash = '#/feed'; },
+    // Troca só a foto e os botões (o servidor ainda não tem a foto nova até sincronizar)
+    aoMudar: q => {
+      const art = el.querySelector('article.post');
+      art.querySelector('.post-foto')?.remove();
+      art.querySelector('.estatisticas').insertAdjacentHTML('beforebegin', fotoPost(q, 'inteira'));
+      art.querySelector('.post-acoes').outerHTML = botoesAcao(q);
+      limparCache();
+    },
+  });
   // Curtida mudou: mostra ou esconde "Ver quem curtiu"
   el.addEventListener('click', ev => { if (ev.target.closest('[data-curtir]')) setTimeout(() => { el.querySelector('[data-curtidas]').hidden = !p.curtidas; }, 0); }, true);
   el.querySelector('[data-curtidas]').onclick = async () => {

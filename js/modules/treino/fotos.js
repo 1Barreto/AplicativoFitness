@@ -251,6 +251,26 @@ export function recortarQuadrado(arquivo, lado = 256) {
   });
 }
 
+// Reduz uma foto mantendo o formato, com o lado maior em até "maximo" px.
+export function reduzirImagem(arquivo, maximo = 1080) {
+  return new Promise((ok, erro) => {
+    const img = new Image();
+    const url = URL.createObjectURL(arquivo);
+    img.onload = () => {
+      const f = Math.min(1, maximo / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * f); c.height = Math.round(img.height * f);
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      ok(c);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); erro(new Error('Imagem inválida')); };
+    img.src = url;
+  });
+}
+
 // Miniatura quadrada (JPEG) em data URL, para a foto do exercício
 export async function reduzirFoto(arquivo, lado = 256) {
   return (await recortarQuadrado(arquivo, lado)).toDataURL('image/jpeg', 0.8);
