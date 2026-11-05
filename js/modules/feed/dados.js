@@ -11,6 +11,8 @@ import { DB } from '../../core/db.js';
 import { Auth } from '../../core/auth.js';
 import { Bus, debounce, agoraISO } from '../../core/util.js';
 import { obterTreino, mapaDeExercicios, mapaDeRecordes, resumoTreino } from '../treino/dados.js';
+import { recortarQuadrado } from '../treino/fotos.js';
+import { SUPABASE_URL } from '../../config.js';
 import { T as TD, obterConfig, refeicaoFeita, somar, fmtQtd, calcular, hojeISO, somarDias } from '../dieta/dados.js';
 
 export const TF = { PERFIS: 'perfis', FEED: 'feed' };
@@ -59,6 +61,44 @@ export async function salvarNome(nome) {
   if (!u) throw new Error('Entre na sua conta primeiro.');
   const atual = await DB.obter(TF.PERFIS, u.id);
   return DB.salvar(TF.PERFIS, { ...(atual || {}), id: u.id, nome: nome.trim().slice(0, 40) });
+}
+
+// ---------- Foto do perfil ----------
+// A foto fica no Supabase Storage (pasta "avatares/<id da conta>/"), já
+// reduzida no aparelho para 320×320 (uns 20 KB). O perfil guarda só o
+// endereço dela. Precisa do supabase/foto-perfil.sql rodado uma vez.
+const BALDE = 'avatares';
+const PREFIXO_FOTO = `${SUPABASE_URL}/storage/v1/object/public/${BALDE}/`;
+// Só aceita fotos do nosso próprio Storage (ninguém consegue pôr outro endereço no feed)
+export const fotoValida = url => typeof url === 'string' && url.startsWith(PREFIXO_FOTO) ? url : null;
+
+const paraBlob = c => new Promise((ok, erro) => c.toBlob(b => (b ? ok(b) : erro(new Error('Não foi possível preparar a foto'))), 'image/jpeg', 0.85));
+function erroFoto(error) {
+  if (/bucket not found|not found/i.test(error?.message || '') || error?.statusCode === '404')
+    return new Error('A foto de perfil ainda não foi ativada no Supabase.');
+  return new Error(navigator.onLine ? (error?.message || 'Erro ao enviar a foto.') : 'Sem internet. Tente de novo quando estiver conectado.');
+}
+
+export async function salvarFoto(arquivo) {
+  const { c, u } = cliente();
+  let blob;
+  try { blob = await paraBlob(await recortarQuadrado(arquivo, 320)); } catch { throw new Error('Não foi possível abrir essa imagem'); }
+  const caminho = `${u.id}/foto.jpg`;
+  const { error } = await c.storage.from(BALDE).upload(caminho, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '31536000' });
+  if (error) throw erroFoto(error);
+  // "?v=" muda a cada troca, para ninguém ver a foto antiga guardada em cache
+  const foto = `${c.storage.from(BALDE).getPublicUrl(caminho).data.publicUrl}?v=${Date.now()}`;
+  const atual = (await meuPerfil()) || {};
+  await DB.salvar(TF.PERFIS, { ...atual, id: u.id, foto });
+  return foto;
+}
+
+export async function removerFoto() {
+  const { c, u } = cliente();
+  const { error } = await c.storage.from(BALDE).remove([`${u.id}/foto.jpg`]);
+  if (error) throw erroFoto(error);
+  const atual = (await meuPerfil()) || {};
+  await DB.salvar(TF.PERFIS, { ...atual, id: u.id, foto: null });
 }
 
 // ---------- Publicar um treino ----------
@@ -161,9 +201,10 @@ async function completar(c, u, posts) {
     c.from('comentarios').select('post_id').in('post_id', ids),
   ]);
   [perfis, curtidas, comentarios].forEach(r => verificar(r.error));
-  const nomes = new Map(perfis.data.map(p => [p.id, p.data?.nome]));
+  const nomes = new Map(perfis.data.map(p => [p.id, p.data]));
   posts.forEach(p => {
-    p.autorNome = nomes.get(p.autor) || 'Atleta';
+    p.autorNome = nomes.get(p.autor)?.nome || 'Atleta';
+    p.autorFoto = fotoValida(nomes.get(p.autor)?.foto);
     p.meu = p.autor === u.id;
     const cs = curtidas.data.filter(x => x.post_id === p.id);
     p.curtidas = cs.length;
@@ -184,7 +225,7 @@ async function viaFuncao(c, u, args) {
   if (funcaoAusente(error)) { semFuncaoFeed = true; return null; }
   verificar(error);
   return data.map(l => ({
-    ...paraPost(l), autorNome: l.autor_nome || 'Atleta', meu: l.user_id === u.id,
+    ...paraPost(l), autorNome: l.autor_nome || 'Atleta', autorFoto: fotoValida(l.autor_foto), meu: l.user_id === u.id,
     curtidas: l.curtidas || 0, curti: !!l.curti, comentarios: l.comentarios || 0,
   }));
 }
@@ -235,8 +276,8 @@ async function nomesDe(c, ids) {
   if (!ids.length) return [];
   const { data, error } = await c.from(TF.PERFIS).select('id, data').in('id', [...new Set(ids)]);
   verificar(error);
-  const nomes = new Map(data.map(p => [p.id, p.data?.nome]));
-  return ids.map(id => ({ id, nome: nomes.get(id) || 'Atleta' }));
+  const perfis = new Map(data.map(p => [p.id, p.data]));
+  return ids.map(id => ({ id, nome: perfis.get(id)?.nome || 'Atleta', foto: fotoValida(perfis.get(id)?.foto) }));
 }
 
 // ---------- Comentários ----------
@@ -244,8 +285,8 @@ export async function listarComentarios(postId) {
   const { c, u } = cliente();
   const { data, error } = await c.from('comentarios').select('id, user_id, texto, criado_em').eq('post_id', postId).order('criado_em');
   verificar(error);
-  const nomes = new Map((await nomesDe(c, data.map(x => x.user_id))).map(x => [x.id, x.nome]));
-  return data.map(x => ({ ...x, nome: nomes.get(x.user_id), meu: x.user_id === u.id }));
+  const pessoas = new Map((await nomesDe(c, data.map(x => x.user_id))).map(x => [x.id, x]));
+  return data.map(x => ({ ...x, nome: pessoas.get(x.user_id)?.nome, foto: pessoas.get(x.user_id)?.foto, meu: x.user_id === u.id }));
 }
 
 export async function comentar(postId, texto) {

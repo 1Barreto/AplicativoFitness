@@ -9,6 +9,8 @@ import { Icone, definirTitulo, vazio } from '../../core/ui.js';
 import { criarGrafico } from '../../core/graficos.js';
 import { listarTreinos, mapaDeExercicios, resumoTreino, mapaDeRecordes, NOMES_RECORDE, contaParaVolume } from '../treino/dados.js';
 import { listarMedidas } from '../corpo/dados.js';
+import { meuPerfil, fotoValida } from '../feed/dados.js';
+import { avatarPessoa, ligarEscolhaFoto } from '../feed/foto-perfil.js';
 
 const METRICAS = {
   duracao: { nome: 'Duração' },
@@ -43,9 +45,10 @@ function semanasSeguidas(treinos) {
 
 async function telaPerfil(el) {
   definirTitulo('Perfil');
-  const [treinos, mapa, recordes, medidas] = await Promise.all([listarTreinos(), mapaDeExercicios(), mapaDeRecordes(), listarMedidas()]);
+  const [treinos, mapa, recordes, medidas, perfil] = await Promise.all([listarTreinos(), mapaDeExercicios(), mapaDeRecordes(), listarMedidas(), meuPerfil().catch(() => null)]);
   const usuario = Auth.usuario();
-  const nome = usuario?.email?.split('@')[0] || 'Meu perfil';
+  const nome = perfil?.nome || usuario?.email?.split('@')[0] || 'Meu perfil';
+  const foto = fotoValida(perfil?.foto);
 
   // Métricas por treino (calculadas uma vez)
   const info = treinos.map(t => {
@@ -65,7 +68,11 @@ async function telaPerfil(el) {
   el.innerHTML = `
     <section class="cartao perfil-cab">
       <div class="perfil-id">
-        <span class="avatar-ex grande">${esc(nome[0].toUpperCase())}</span>
+        ${usuario ? `<label class="perfil-foto" title="Trocar foto do perfil">
+          <span data-perfil-avatar>${avatarPessoa(nome, 'grande', foto)}</span>
+          <span class="perfil-foto-icone" aria-hidden="true">${Icone.camera}</span>
+          <input type="file" accept="image/*" hidden aria-label="Trocar foto do perfil" data-perfil-foto>
+        </label>` : avatarPessoa(nome, 'grande')}
         <div><h2>${esc(nome)}</h2><p class="sutil">${treinos.length ? `Treinando desde ${fmtLocal(new Date(treinos[treinos.length - 1].inicio), { month: 'long', year: 'numeric' })}` : 'Comece seu primeiro treino!'}</p></div>
       </div>
       <div class="perfil-numeros">
@@ -138,6 +145,8 @@ async function telaPerfil(el) {
   let periodo = Number(pref.get('periodo', 12));
   if (!METRICAS[metrica]) metrica = 'duracao';
   if (!PERIODOS[periodo]) periodo = 12;
+  const inputFoto = el.querySelector('[data-perfil-foto]');
+  if (inputFoto) ligarEscolhaFoto(inputFoto, f => { el.querySelector('[data-perfil-avatar]').innerHTML = avatarPessoa(nome, 'grande', f); });
   el.querySelector('[data-periodo]').value = String(periodo);
 
   const valorDe = (i, m) => (m === 'duracao' ? i.duracao / 3600000 : m === 'volume' ? i.volume : m === 'reps' ? i.reps : 1);

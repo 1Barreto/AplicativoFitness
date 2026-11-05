@@ -57,9 +57,11 @@ grant execute on function public.app_alteracoes(jsonb) to authenticated;
 --   p_tipo  'treino' ou 'refeicao'
 --   p_inicio, p_qtd  paginação (15 por vez no app, no máximo 50)
 --   p_id    uma publicação só (tela de detalhe)
-create or replace function public.feed_listar(
+drop function if exists public.feed_listar(text, int, int, uuid);
+
+create function public.feed_listar(
   p_tipo text default 'treino', p_inicio int default 0, p_qtd int default 15, p_id uuid default null)
-returns table (id uuid, user_id uuid, data jsonb, autor_nome text, curtidas int, curti boolean, comentarios int)
+returns table (id uuid, user_id uuid, data jsonb, autor_nome text, autor_foto text, curtidas int, curti boolean, comentarios int)
 language plpgsql
 stable
 security invoker
@@ -84,11 +86,13 @@ begin
      offset greatest(p_inicio, 0) limit least(greatest(p_qtd, 1), 50))
   )
   select p.id, p.user_id, p.data,
-    (select pf.data->>'nome' from public.perfis pf where pf.id = p.user_id),
+    pf.data->>'nome',
+    pf.data->>'foto',
     (select count(*)::int from public.curtidas c where c.post_id = p.id),
     exists (select 1 from public.curtidas c where c.post_id = p.id and c.user_id = uid),
     (select count(*)::int from public.comentarios m where m.post_id = p.id)
   from posts p
+  left join public.perfis pf on pf.id = p.user_id
   order by p.data->>'fim' desc;
 end;
 $$;
