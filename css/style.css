@@ -1908,3 +1908,12 @@ a.cartao:hover { border-color: transparent; background: var(--fundo-3); }
 .perfil-foto.enviando, .foto-perfil-linha.enviando { opacity: .55; pointer-events: none; }
 .foto-perfil-linha { cursor: pointer; }
 .foto-perfil-linha .avatar-ex { width: 36px; height: 36px; font-size: 14px; }
+
+/* ---------- Foto na publicação ---------- */
+.post-foto {
+  display: block; width: 100%; height: auto; max-height: 420px; object-fit: cover;
+  border-radius: 14px; background: var(--fundo-3);
+}
+.post-foto.inteira { max-height: none; object-fit: contain; margin: 4px 0; }
+.post-acao-foto { margin-left: auto; }
+.post-acao-foto.enviando { opacity: .5; pointer-events: none; }

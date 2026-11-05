@@ -11,7 +11,7 @@ import { DB } from '../../core/db.js';
 import { Auth } from '../../core/auth.js';
 import { Bus, debounce, agoraISO } from '../../core/util.js';
 import { obterTreino, mapaDeExercicios, mapaDeRecordes, resumoTreino } from '../treino/dados.js';
-import { recortarQuadrado } from '../treino/fotos.js';
+import { recortarQuadrado, reduzirImagem } from '../treino/fotos.js';
 import { SUPABASE_URL } from '../../config.js';
 import { T as TD, obterConfig, refeicaoFeita, somar, fmtQtd, calcular, hojeISO, somarDias } from '../dieta/dados.js';
 
@@ -72,7 +72,7 @@ const PREFIXO_FOTO = `${SUPABASE_URL}/storage/v1/object/public/${BALDE}/`;
 // Só aceita fotos do nosso próprio Storage (ninguém consegue pôr outro endereço no feed)
 export const fotoValida = url => typeof url === 'string' && url.startsWith(PREFIXO_FOTO) ? url : null;
 
-const paraBlob = c => new Promise((ok, erro) => c.toBlob(b => (b ? ok(b) : erro(new Error('Não foi possível preparar a foto'))), 'image/jpeg', 0.85));
+const paraBlob = (c, q = 0.85) => new Promise((ok, erro) => c.toBlob(b => (b ? ok(b) : erro(new Error('Não foi possível preparar a foto'))), 'image/jpeg', q));
 function erroFoto(error) {
   if (/bucket not found|not found/i.test(error?.message || '') || error?.statusCode === '404')
     return new Error('A foto de perfil ainda não foi ativada no Supabase.');
@@ -100,6 +100,42 @@ export async function removerFoto() {
   const atual = (await meuPerfil()) || {};
   await DB.salvar(TF.PERFIS, { ...atual, id: u.id, foto: null });
 }
+
+// ---------- Foto na publicação ----------
+// Opcional: a pessoa pode pôr uma foto num treino ou refeição que publicou.
+// Vai para o Storage (pasta "fotos-feed/<id da conta>/<id do post>.jpg"),
+// reduzida no aparelho para no máximo 1080 px (uns 150 KB). A publicação
+// guarda o endereço e o tamanho (para a tela não pular quando a foto chega).
+// Precisa do supabase/fotos-feed.sql rodado uma vez.
+const BALDE_POSTS = 'fotos-feed';
+const PREFIXO_POSTS = `${SUPABASE_URL}/storage/v1/object/public/${BALDE_POSTS}/`;
+export const fotoPostValida = url => typeof url === 'string' && url.startsWith(PREFIXO_POSTS) ? url : null;
+const erroFotoPost = error => (/bucket not found|not found/i.test(error?.message || '') || error?.statusCode === '404')
+  ? new Error('A foto nas publicações ainda não foi ativada no Supabase.')
+  : erroFoto(error);
+
+export async function salvarFotoPost(id, arquivo) {
+  const { c, u } = cliente();
+  const atual = await DB.obter(TF.FEED, id);
+  if (!atual) throw new Error('Essa publicação ainda não chegou neste aparelho. Tente de novo em instantes.');
+  let canvas, blob;
+  try { canvas = await reduzirImagem(arquivo, 1080); blob = await paraBlob(canvas, 0.82); } catch { throw new Error('Não foi possível abrir essa imagem'); }
+  const caminho = `${u.id}/${id}.jpg`;
+  const { error } = await c.storage.from(BALDE_POSTS).upload(caminho, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '31536000' });
+  if (error) throw erroFotoPost(error);
+  const foto = { foto: `${c.storage.from(BALDE_POSTS).getPublicUrl(caminho).data.publicUrl}?v=${Date.now()}`, fotoL: canvas.width, fotoA: canvas.height };
+  await DB.salvar(TF.FEED, { ...atual, ...foto });
+  return foto;
+}
+
+export async function removerFotoPost(id) {
+  const { c, u } = cliente();
+  const { error } = await c.storage.from(BALDE_POSTS).remove([`${u.id}/${id}.jpg`]);
+  if (error) throw erroFotoPost(error);
+  const atual = await DB.obter(TF.FEED, id);
+  if (atual) await DB.salvar(TF.FEED, { ...atual, foto: null, fotoL: null, fotoA: null });
+}
+const fotoDoPost = p => (p?.foto ? { foto: p.foto, fotoL: p.fotoL, fotoA: p.fotoA } : {});
 
 // ---------- Publicar um treino ----------
 // A publicação tem o mesmo id do treino e guarda uma cópia do resumo, com os
@@ -130,17 +166,23 @@ export async function publicarTreino(t) {
   if (!publicarAtivo() || !t?.fim) return null;
   return DB.salvar(TF.FEED, await montarPublicacao(t));
 }
-export const removerPublicacao = id => DB.excluir(TF.FEED, id);
+export async function removerPublicacao(id) {
+  const p = await DB.obter(TF.FEED, id);
+  await DB.excluir(TF.FEED, id);
+  // A foto sai do Storage também (se não der agora, fica lá sem aparecer em lugar nenhum)
+  if (p?.foto) try { const { c, u } = cliente(); await c.storage.from(BALDE_POSTS).remove([`${u.id}/${id}.jpg`]); } catch { /* offline */ }
+}
 export const publicacaoLocal = id => DB.obter(TF.FEED, id);
 
 // Treino editado ou excluído: a publicação acompanha (se existir).
 Bus.on('dados:alterados', async ({ tabela, id, local }) => {
   if (tabela !== 'treinos' || !id || !local) return;
   try {
-    if (!(await DB.obter(TF.FEED, id))) return;
+    const atual = await DB.obter(TF.FEED, id);
+    if (!atual) return;
     const t = await obterTreino(id);
-    if (!t) await DB.excluir(TF.FEED, id);
-    else await DB.salvar(TF.FEED, await montarPublicacao(t));
+    if (!t) await removerPublicacao(id);
+    else await DB.salvar(TF.FEED, { ...(await montarPublicacao(t)), ...fotoDoPost(atual) });
   } catch (e) { console.warn('Feed: não foi possível atualizar a publicação', e); }
 });
 
