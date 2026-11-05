@@ -8,6 +8,7 @@ import { Icone, definirTitulo, toast, confirmar, menu, vazio, folha, pedirTexto 
 import { TIPOS_SERIE, TIPOS_EXERCICIO } from '../treino/dados.js';
 import { rotulosSeries } from '../treino/componentes.js';
 import { avatarExercicio } from '../treino/fotos.js';
+import { avatarPessoa } from './foto-perfil.js';
 import {
   TF, FeedIndisponivel, meuPerfil, salvarNome, listarFeed, obterPost, curtir, quemCurtiu,
   listarComentarios, comentar, apagarComentario, removerPublicacao,
@@ -26,9 +27,6 @@ function haQuanto(iso) {
   if (d < 7) return `há ${d} dias`;
   return fmtData(iso, { day: 'numeric', month: 'short' });
 }
-const inicial = nome => esc((nome || '?').trim()[0]?.toUpperCase() || '?');
-const avatarPessoa = (nome, classe = '') => `<span class="avatar-ex avatar-pessoa ${classe}">${inicial(nome)}</span>`;
-
 // Melhor série de um exercício para o resumo (a mais pesada, sem aquecimento)
 function melhorSerie(e) {
   const validas = e.series.filter(s => s.tipo !== 'A' && (s.peso || s.reps));
@@ -57,7 +55,7 @@ function botoesAcao(p) {
 
 function cabecalho(p) {
   return `<header class="post-cab">
-    ${avatarPessoa(p.autorNome)}
+    ${avatarPessoa(p.autorNome, '', p.autorFoto)}
     <div class="item-texto"><strong>${esc(p.autorNome)}${p.meu ? ' <small class="sutil">(você)</small>' : ''}</strong><small>${haQuanto(p.fim)}</small></div>
     ${p.meu ? `<button class="icon-btn" data-menu-post="${p.id}" aria-label="Opções">${Icone.pontos}</button>` : ''}
   </header>`;
@@ -283,7 +281,7 @@ async function telaFeed(el) {
 }
 // Treino recém-publicado: atualiza a lista quando ele chegar ao servidor
 let pendenteEnvio = false;
-Bus.on('dados:alterados', ({ tabela, local }) => { if (tabela === TF.FEED && local) { pendenteEnvio = true; limparCache(); } });
+Bus.on('dados:alterados', ({ tabela, local }) => { if ((tabela === TF.FEED || tabela === TF.PERFIS) && local) { pendenteEnvio = true; limparCache(); } });
 
 // Pede o nome na primeira vez (é o que os amigos veem no feed)
 async function desenharPerfil(area, aoSalvar) {
@@ -361,7 +359,7 @@ async function telaPost(el, { id }, query) {
   el.querySelector('[data-curtidas]').onclick = async () => {
     try {
       const pessoas = await quemCurtiu(p.id);
-      folha({ titulo: 'Curtidas', classe: 'modal-pequeno', conteudo: `<div class="lista-simples">${pessoas.map(x => `<div class="linha-lista">${avatarPessoa(x.nome)}<span class="item-texto"><strong>${esc(x.nome)}</strong></span></div>`).join('') || '<p class="sutil">Ninguém ainda.</p>'}</div>` });
+      folha({ titulo: 'Curtidas', classe: 'modal-pequeno', conteudo: `<div class="lista-simples">${pessoas.map(x => `<div class="linha-lista">${avatarPessoa(x.nome, '', x.foto)}<span class="item-texto"><strong>${esc(x.nome)}</strong></span></div>`).join('') || '<p class="sutil">Ninguém ainda.</p>'}</div>` });
     } catch (e) { toast(e.message, 'erro'); }
   };
 
@@ -371,7 +369,7 @@ async function telaPost(el, { id }, query) {
       const cs = await listarComentarios(p.id);
       area.innerHTML = cs.length ? cs.map(c => `
         <div class="linha-lista comentario">
-          ${avatarPessoa(c.nome)}
+          ${avatarPessoa(c.nome, '', c.foto)}
           <span class="item-texto"><strong>${esc(c.nome)} <small class="sutil">${haQuanto(c.criado_em)}</small></strong><span class="comentario-texto">${esc(c.texto)}</span></span>
           ${c.meu || p.meu ? `<button class="icon-btn" data-apagar="${c.id}" aria-label="Apagar comentário">${Icone.lixo}</button>` : ''}
         </div>`).join('') : '<p class="sutil comentario-vazio">Nenhum comentário ainda. Seja o primeiro!</p>';

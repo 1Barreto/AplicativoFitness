@@ -230,8 +230,9 @@ export async function bancoDeFotos() {
   return import('./fotos-banco.js');
 }
 
-// Reduz uma foto escolhida pelo usuário para uma miniatura quadrada (JPEG)
-export function reduzirFoto(arquivo, lado = 256) {
+// Recorta uma foto escolhida pelo usuário num quadrado do centro e reduz
+// para lado × lado. Resolve com o canvas pronto.
+export function recortarQuadrado(arquivo, lado = 256) {
   return new Promise((ok, erro) => {
     const img = new Image();
     const url = URL.createObjectURL(arquivo);
@@ -239,13 +240,20 @@ export function reduzirFoto(arquivo, lado = 256) {
       const c = document.createElement('canvas');
       c.width = c.height = lado;
       const m = Math.min(img.width, img.height);
-      c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, lado, lado);
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, lado, lado);
       URL.revokeObjectURL(url);
-      ok(c.toDataURL('image/jpeg', 0.8));
+      ok(c);
     };
     img.onerror = () => { URL.revokeObjectURL(url); erro(new Error('Imagem inválida')); };
     img.src = url;
   });
+}
+
+// Miniatura quadrada (JPEG) em data URL, para a foto do exercício
+export async function reduzirFoto(arquivo, lado = 256) {
+  return (await recortarQuadrado(arquivo, lado)).toDataURL('image/jpeg', 0.8);
 }
 
 // Folha para escolher a foto: banco de fotos, foto própria ou remover.

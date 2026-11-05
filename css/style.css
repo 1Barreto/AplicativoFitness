@@ -1893,3 +1893,18 @@ a.cartao:hover { border-color: transparent; background: var(--fundo-3); }
 .post-itens .item-texto strong { font-size: 15px; font-weight: 500; }
 .post-itens li > .sutil { font-size: 14px; white-space: nowrap; }
 .post-itens.completa { margin: 0; }
+
+/* ---------- Foto do perfil ---------- */
+.avatar-pessoa.com-foto { background: var(--fundo-3); border: 0; padding: 0; }
+.avatar-pessoa.com-foto img { object-fit: cover; }
+.perfil-foto { position: relative; display: inline-flex; flex-shrink: 0; cursor: pointer; border-radius: 50%; }
+.perfil-foto:focus-within { outline: 2px solid var(--destaque); outline-offset: 2px; }
+.perfil-foto-icone {
+  position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--destaque); color: var(--fundo); border: 2px solid var(--fundo-2);
+}
+.perfil-foto-icone svg { width: 12px; height: 12px; }
+.perfil-foto.enviando, .foto-perfil-linha.enviando { opacity: .55; pointer-events: none; }
+.foto-perfil-linha { cursor: pointer; }
+.foto-perfil-linha .avatar-ex { width: 36px; height: 36px; font-size: 14px; }

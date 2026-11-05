@@ -9,7 +9,7 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v101';
+const VERSAO = 'v102';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
 const CACHE_FOTOS = 'fotos-v1'; // fotos dos exercícios (não mudam)
@@ -60,6 +60,7 @@ const ARQUIVOS = [
   './js/modules/perfil/perfil.js',
   './js/modules/feed/dados.js',
   './js/modules/feed/feed.js',
+  './js/modules/feed/foto-perfil.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
