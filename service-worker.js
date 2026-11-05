@@ -9,7 +9,7 @@
 // Ao adicionar arquivos novos (ex.: módulo de dieta), inclua-os em ARQUIVOS
 // e aumente VERSAO.
 
-const VERSAO = 'v102';
+const VERSAO = 'v103';
 const CACHE_APP = `app-${VERSAO}`;
 const CACHE_CDN = 'cdn-v1';
 const CACHE_FOTOS = 'fotos-v1'; // fotos dos exercícios (não mudam)
@@ -98,6 +98,21 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+
+  // Fotos de perfil (Storage público): cada troca de foto muda o "?v=" do
+  // endereço, então dá para guardar para sempre e abrir na hora.
+  const avatar = url.hostname.endsWith('.supabase.co') && url.pathname.includes('/storage/v1/object/public/avatares/');
+  if (avatar) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_FOTOS);
+      const emCache = await cache.match(req);
+      if (emCache) return emCache;
+      const resp = await fetch(req);
+      if (resp.ok || resp.type === 'opaque') cache.put(req, resp.clone());
+      return resp;
+    })());
+    return;
+  }
 
   // API do Supabase: nunca usar cache
   if (url.hostname.endsWith('.supabase.co') || url.hostname.endsWith('.supabase.in')) return;
