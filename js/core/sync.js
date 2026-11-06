@@ -44,6 +44,20 @@ function paraLocal(linha) {
 const ausentes = new Set();
 const tabelaAusente = e => !!e && (e.code === 'PGRST205' || e.code === '42P01' || /could not find the table|does not exist/i.test(e.message || ''));
 
+// A chave das tabelas é (user_id, id) (supabase/chave-por-usuario.sql), assim
+// ids iguais para todo mundo (exercícios do Hevy, ajustes nos exercícios padrão)
+// não batem com os de outra pessoa. Se o SQL ainda não foi rodado, o servidor
+// responde 42P10 e a tabela volta a usar só o id.
+const chaveAntiga = new Set();
+async function gravarLote(cliente, tabela, linhas) {
+  if (!chaveAntiga.has(tabela)) {
+    const r = await cliente.from(tabela).upsert(linhas, { onConflict: 'user_id,id' });
+    if (r.error?.code !== '42P10') return r;
+    chaveAntiga.add(tabela);
+  }
+  return cliente.from(tabela).upsert(linhas, { onConflict: 'id' });
+}
+
 async function enviar(cliente, userId) {
   const pendentes = await DB.pendentes();
   const porTabela = {};
@@ -51,7 +65,7 @@ async function enviar(cliente, userId) {
   for (const [tabela, regs] of Object.entries(porTabela)) {
     for (let i = 0; i < regs.length; i += LOTE) {
       const lote = regs.slice(i, i + LOTE);
-      const { error } = await cliente.from(tabela).upsert(lote.map(r => paraRemoto(r, userId)), { onConflict: 'id' });
+      const { error } = await gravarLote(cliente, tabela, lote.map(r => paraRemoto(r, userId)));
       if (tabelaAusente(error)) { ausentes.add(tabela); break; } // fica pendente até a tabela existir
       if (error) throw error;
       await DB.marcarEnviados(lote.map(r => ({ tabela, id: r.id, updated_at: r.updated_at })));

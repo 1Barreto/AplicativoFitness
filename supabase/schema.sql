@@ -42,12 +42,14 @@ as $$
 begin
   execute format($f$
     create table if not exists public.%1$I (
-      id                uuid primary key,
+      id                uuid not null,
       user_id           uuid not null default auth.uid() references auth.users(id) on delete cascade,
       updated_at        timestamptz not null default now(),
       deleted           boolean not null default false,
       data              jsonb not null default '{}'::jsonb,
-      server_updated_at timestamptz not null default now()
+      server_updated_at timestamptz not null default now(),
+      -- o mesmo id pode existir uma vez por pessoa (ids fixos, ex.: Hevy)
+      primary key (user_id, id)
     )$f$, nome);
 
   execute format('create index if not exists %1$I on public.%2$I (user_id, server_updated_at)', nome || '_sync_idx', nome);
