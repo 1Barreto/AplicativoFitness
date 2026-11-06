@@ -32,6 +32,17 @@ alter table public.perfis add constraint perfis_id_dono check (id = user_id);
 -- Feed em ordem do treino mais recente
 create index if not exists feed_fim_idx on public.feed ((data->>'fim') desc) where not deleted;
 
+-- Curtidas e comentários apontam para o id da publicação, então ele
+-- continua único no feed (além da chave (user_id, id) das outras tabelas)
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conrelid = 'public.feed'::regclass and conname = 'feed_id_key')
+     and not exists (select 1 from pg_constraint where conrelid = 'public.feed'::regclass and contype = 'p'
+                     and pg_get_constraintdef(oid) = 'PRIMARY KEY (id)') then
+    alter table public.feed add constraint feed_id_key unique (id);
+  end if;
+end $$;
+
 -- ---------- Curtidas ----------
 create table if not exists public.curtidas (
   post_id   uuid not null references public.feed(id) on delete cascade,
