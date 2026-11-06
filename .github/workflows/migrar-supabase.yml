@@ -1,0 +1,43 @@
+# Copia o Supabase antigo para o projeto novo (uso único).
+# Rode em: Actions > "Migrar Supabase" > Run workflow.
+# O projeto antigo só é lido; nada lá é apagado. Detalhes em tools/migrar-supabase.sh.
+name: Migrar Supabase
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Escreva MIGRAR para confirmar'
+        required: true
+      so_fotos:
+        description: 'Copiar só as fotos (use apenas se essa parte falhou antes)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrar:
+    if: inputs.confirmar == 'MIGRAR'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar cliente do Postgres 17
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Copiar banco, contas e fotos
+        env:
+          ANTIGO_DB: ${{ secrets.SUPABASE_ANTIGO_DB }}
+          NOVO_DB: ${{ secrets.SUPABASE_NOVO_DB }}
+          ANTIGO_CHAVE: ${{ secrets.SUPABASE_ANTIGO_CHAVE }}
+          NOVO_CHAVE: ${{ secrets.SUPABASE_NOVO_CHAVE }}
+          SO_FOTOS: ${{ inputs.so_fotos && '1' || '' }}
+          PG_BIN: /usr/lib/postgresql/17/bin
+        run: bash tools/migrar-supabase.sh
