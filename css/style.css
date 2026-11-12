@@ -1929,3 +1929,35 @@ a.cartao:hover { border-color: transparent; background: var(--fundo-3); }
 .toast-texto { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.3; }
 .toast-texto b { color: var(--trofeu); font-weight: 700; font-size: 15px; }
 .toast-texto span { color: var(--texto-2); font-size: 13px; }
+
+/* ---------- Água ---------- */
+:root { --agua: #5cc8ff; --agua-rgb: 92, 200, 255; }
+.cartao-agua .cartao-cab > svg { color: var(--agua); }
+.cartao-agua .cartao-cab .icon-btn { width: 32px; height: 32px; margin-right: -6px; color: var(--texto-2); }
+.cartao-agua .cartao-cab .icon-btn svg { width: 18px; height: 18px; }
+.agua-intro { margin: 8px 0 12px; }
+.agua-inicio { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.agua-numeros { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 10px 0 12px; }
+.agua-total { margin: 0; font-variant-numeric: tabular-nums; }
+.agua-total strong { font-family: var(--fonte-titulo); font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+.agua-total span { color: var(--texto-2); font-size: 15px; font-weight: 500; }
+.agua-status { margin: 0; font-size: 13px; font-weight: 600; color: var(--texto-2); }
+.cartao-agua.batida .agua-status { color: var(--agua); }
+.agua-garrafas { display: flex; gap: 8px; margin-bottom: 14px; }
+.garrafa { width: 26px; height: 44px; flex: none; overflow: visible; }
+.garrafa-contorno { fill: none; stroke: rgba(255, 255, 255, .2); stroke-width: 1.5; transition: stroke .3s; }
+.garrafa-agua { fill: var(--agua); transform: scaleY(0); transform-origin: 50% 100%; transform-box: fill-box; }
+.garrafa.cheia .garrafa-agua { transform: scaleY(1); }
+.garrafa.cheia .garrafa-contorno { stroke: var(--agua); }
+.garrafa.nova .garrafa-agua { animation: agua-encher .8s cubic-bezier(.16, 1, .3, 1); }
+@keyframes agua-encher { from { transform: scaleY(0); } }
+.agua-barra { height: 8px; border-radius: 99px; background: var(--fundo-3); overflow: hidden; margin-bottom: 14px; }
+.agua-barra i { display: block; height: 100%; border-radius: inherit; background: var(--agua); transition: width .5s ease; }
+.agua-acoes { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.agua-acoes .btn-primario { gap: 6px; }
+.agua-acoes .btn-primario svg { width: 18px; height: 18px; }
+.agua-desfazer { width: 48px; padding: 0; }
+.agua-desfazer svg { width: 20px; height: 20px; }
+.agua-desfazer:disabled { opacity: .35; }
+.agua-garrafa-info { margin: 10px 0 0; }
+@media (prefers-reduced-motion: reduce) { .garrafa.nova .garrafa-agua { animation: none; } }

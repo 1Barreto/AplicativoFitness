@@ -5,6 +5,7 @@ import { Modulos } from '../../core/modulos.js';
 import { esc, fmtNum, clone, normalizar, fmtLocal } from '../../core/util.js';
 import { Icone, definirTitulo, toast, confirmar, menu, pedirTexto, vazio, folha } from '../../core/ui.js';
 import { pesoAtual } from '../corpo/dados.js';
+import { cartaoAgua } from '../agua/agua.js';
 import {
   T, obterConfig, salvarConfig, hojeISO, somarDias, itensDoDia, diasComRegistro, totaisPorDia, metasDe, tiposDosDias, marcarTipoDia, TIPOS_DIA, comMetas, proximaMudancaMetas, proximaRefeicao, ultimaVezDaRefeicao, refeicaoFeita, consumidos, marcarRefeicaoFeita, refeicaoAtrasada, salvarItem, salvarItens, excluirItem, excluirItens, novoItem,
   listarMeusAlimentos, salvarAlimento, excluirAlimento, listarRefeicoesSalvas, salvarRefeicaoSalva, excluirRefeicaoSalva,
@@ -157,6 +158,7 @@ async function telaDieta(el, _p, query) {
           <a class="chip" href="#/dieta/gasto">${Icone.progresso}<span>Gasto calórico</span></a>
           <a class="chip" href="#/dieta/estoque">${Icone.estoque}<span>Estoque</span></a>
         </nav>
+        <div class="slot-cartao" data-agua></div>
         ${cartaoSemana(semana, totaisSemana, metasDia, dia, tipos)}
       </div>
 
@@ -198,6 +200,8 @@ async function telaDieta(el, _p, query) {
     </div>`;
 
   const recarregar = () => telaDieta(el, _p, query);
+  if (dia <= hojeISO()) cartaoAgua(el.querySelector('[data-agua]'), { dia }).catch(console.error);
+  else el.querySelector('[data-agua]').remove();
   el.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => ir(b.dataset.ir));
   el.querySelector('[data-acao=desbloquear]')?.addEventListener('click', () => { desbloqueados.add(dia); recarregar(); });
   el.querySelector('[data-tipo-dia]').addEventListener('click', async e => {
