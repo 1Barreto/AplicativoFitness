@@ -248,13 +248,25 @@ async function telaFeed(el) {
   let parado = false;
   const guardar = () => { caches[tipo] = { ...estado }; salvarNoAparelho(); };
 
+  // Refeições: de início só as de hoje e de ontem; "Carregar mais" mostra as outras
+  let expandido = false;
+  const visiveis = () => {
+    if (tipo !== 'refeicao' || expandido) return estado.posts;
+    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    const desde = ontem.toLocaleDateString('sv-SE');
+    return estado.posts.filter(p => !p.dia || p.dia >= desde);
+  };
   const desenhar = () => {
     posts.clear();
     estado.posts.forEach(p => posts.set(p.id, p));
-    const html = estado.posts.length ? estado.posts.map(cartaoPost).join('') : vazio(tipo === 'treino' ? Icone.treino : Icone.dieta, ...VAZIO[tipo]);
+    const lista_ = visiveis();
+    const escondidas = lista_.length < estado.posts.length;
+    const html = lista_.length ? lista_.map(cartaoPost).join('')
+      : escondidas ? vazio(Icone.dieta, 'Nenhuma refeição de hoje ou ontem', 'Toque em "Carregar mais" para ver as anteriores.')
+      : vazio(tipo === 'treino' ? Icone.treino : Icone.dieta, ...VAZIO[tipo]);
     // Nada mudou desde o último desenho: não recria a lista (as fotos não piscam)
     if (html !== ultimoHtml) { lista.innerHTML = html; ultimoHtml = html; }
-    rodape.innerHTML = estado.temMais ? '<button class="btn btn-secundario" data-mais>Carregar mais</button>' : '';
+    rodape.innerHTML = estado.temMais || escondidas ? '<button class="btn btn-secundario" data-mais>Carregar mais</button>' : '';
   };
   ligarAcoes(lista, posts, {
     aoRemover: p => { estado.posts = estado.posts.filter(x => x.id !== p.id); guardar(); desenhar(); },
@@ -262,6 +274,9 @@ async function telaFeed(el) {
   });
   rodape.addEventListener('click', async ev => {
     const b = ev.target.closest('[data-mais]'); if (!b) return;
+    // Primeiro toque nas Refeições: mostra as que já vieram e estavam escondidas
+    if (!expandido && visiveis().length < estado.posts.length) { expandido = true; desenhar(); return; }
+    expandido = true;
     b.disabled = true; b.textContent = 'Carregando…';
     const t = tipo;
     try {
@@ -302,6 +317,7 @@ async function telaFeed(el) {
   el.querySelector('[data-abas]').addEventListener('click', ev => {
     const b = ev.target.closest('[data-aba]'); if (!b || b.dataset.aba === tipo) return;
     tipo = b.dataset.aba;
+    expandido = false;
     try { localStorage.setItem('feedAba', tipo); } catch { /* sem armazenamento */ }
     el.querySelectorAll('[data-aba]').forEach(x => { const a = x === b; x.classList.toggle('ativo', a); x.setAttribute('aria-selected', a); });
     estado = doCache(tipo) ? { ...caches[tipo] } : null;
