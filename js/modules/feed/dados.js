@@ -218,13 +218,18 @@ const processarRefeicoes = debounce(async () => {
         continue;
       }
       if (atual?.deleted && !atual.auto) continue;            // removida pela pessoa
-      if (!atual && (!publicarRefeicoesAtivo() || dia < somarDias(hojeISO(), -1))) continue;
+      const hoje = hojeISO();
+      if (dia > hoje) continue;                               // dia futuro (plano): só quando o dia chegar
+      const nova = !atual || atual.deleted;                    // primeira vez ou voltando depois de desmarcada
+      if (nova && (!publicarRefeicoesAtivo() || dia < somarDias(hoje, -1))) continue;
       const r = config.refeicoes.find(x => x.id === ref);
       const t = somar(lista);
       await DB.salvar(TF.FEED, {
         ...(atual || {}), deleted: false, auto: false,
         tipo: 'refeicao', dia, refeicao: ref, nome: r?.nome || 'Refeição',
-        fim: atual?.fim || agoraISO(),
+        // Voltando ao feed, entra com a hora de agora (não a de quando saiu),
+        // senão fica lá embaixo, atrás das refeições de ontem
+        fim: nova ? agoraISO() : atual.fim,
         kcal: t.kcal, p: t.p, c: t.c, g: t.g,
         itens: lista.map(i => ({ nome: i.alimento?.nome || 'Alimento', marca: i.alimento?.marca || '', qtd: fmtQtd(i), kcal: Math.round(calcular(i.alimento?.n, i.gramas).kcal) })),
       });
