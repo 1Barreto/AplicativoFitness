@@ -1961,3 +1961,13 @@ a.cartao:hover { border-color: transparent; background: var(--fundo-3); }
 .agua-desfazer:disabled { opacity: .35; }
 .agua-garrafa-info { margin: 10px 0 0; }
 @media (prefers-reduced-motion: reduce) { .garrafa.nova .garrafa-agua { animation: none; } }
+/* Selo de recorde ao lado da série (detalhe do treino): sempre numa linha,
+   compacto e sem aumentar a altura da linha */
+.tabela-detalhe td:last-child { white-space: nowrap; padding-right: 0; }
+.selo.selo-serie { gap: 3px; padding: 2px 7px 2px 5px; font-size: 11.5px; line-height: 16px; white-space: nowrap; vertical-align: middle; }
+.selo.selo-serie svg { width: 13px; height: 13px; flex: none; }
+.selo-serie .selo-n { display: none; }
+@media (max-width: 389px) {
+  .selo-serie.varios .selo-txt { display: none; }
+  .selo-serie.varios .selo-n { display: inline; }
+}

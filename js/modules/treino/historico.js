@@ -5,7 +5,7 @@ import { esc, fmtNum, fmtDataHora, fmtDuracao, fmtVolume, clone, uuid, rolador, 
 import { Icone, definirTitulo, toast, confirmar, menu, vazio } from '../../core/ui.js';
 import {
   listarTreinos, obterTreino, salvarTreino, excluirTreino, mapaDeExercicios, resumoTreino, mapaDeRecordes,
-  NOMES_RECORDE, TIPOS_SERIE, TIPOS_EXERCICIO, salvarRotina, listarRotinas,
+  NOMES_RECORDE, RECORDE_CURTO, TIPOS_SERIE, TIPOS_EXERCICIO, salvarRotina, listarRotinas,
 } from './dados.js';
 import { rotulosSeries, fmtRir } from './componentes.js';
 import { montarEditor, iniciarTreino } from './sessao.js';
@@ -124,7 +124,7 @@ async function telaDetalhe(el, { id }, query) {
             <tr>
               <td><span class="tipo-serie mini ${TIPOS_SERIE[s.tipo]?.classe || ''}">${rot[j]}</span></td>
               <td>${fmtNum(s.peso) || '–'}</td><td>${fmtNum(s.reps) || '–'}</td>${e.series.some(x => x.rir != null) ? `<td class="col-rir">${s.rir != null ? fmtRir(s.rir) : '–'}</td>` : ''}
-              <td>${recordes.has(s.uid) ? `<span class="selo" title="${recordes.get(s.uid).map(x => NOMES_RECORDE[x]).join(', ')}">${Icone.trofeu}${recordes.get(s.uid).map(x => NOMES_RECORDE[x]).join(' · ')}</span>` : ''}</td>
+              <td>${recordes.has(s.uid) ? seloSerie(recordes.get(s.uid)) : ''}</td>
             </tr>`).join('')}</tbody>
         </table>
       </section>`;
@@ -193,3 +193,10 @@ Modulos.registrar({
     '/historico/:id/editar': { view: telaEditar, recarregar: false },
   },
 });
+
+// Selo de recorde ao lado da série: rótulo curto numa linha só. Em telas
+// estreitas, com vários recordes na mesma série, mostra só o troféu e o número.
+function seloSerie(tipos) {
+  const nomes = tipos.map(x => NOMES_RECORDE[x]).join(', ');
+  return `<span class="selo selo-serie${tipos.length > 1 ? ' varios' : ''}" title="Recorde: ${nomes}" aria-label="Recorde: ${nomes}">${Icone.trofeu}<span class="selo-txt" aria-hidden="true">${tipos.map(x => RECORDE_CURTO[x]).join(' · ')}</span>${tipos.length > 1 ? `<span class="selo-n" aria-hidden="true">${tipos.length}</span>` : ''}</span>`;
+}

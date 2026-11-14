@@ -200,6 +200,8 @@ export function recordesBatidos(serie, anteriores) {
 }
 
 export const NOMES_RECORDE = { carga: 'Maior carga', e1rm: 'Melhor 1RM est.', volume: 'Maior volume' };
+// Rótulo curto para o selo ao lado da série (cabe numa linha no celular).
+export const RECORDE_CURTO = { carga: 'Carga', e1rm: '1RM', volume: 'Volume' };
 
 // Percorre os treinos em ordem cronológica e marca, em cada treino, a melhor
 // série de cada tipo de recorde quando ela supera tudo o que veio antes no
