@@ -10,7 +10,7 @@ import { Bus, uuid, esc, num, fmtNum, fmtDuracao, fmtSeg, fmtVolume, agoraISO, c
 import { Icone, definirTitulo, toast, confirmar, menu } from '../../core/ui.js';
 import { som } from '../../core/som.js';
 import {
-  mapaDeExercicios, ultimasSeries, recordesExercicio, melhoresDeSeries, recordesBatidos, NOMES_RECORDE,
+  mapaDeExercicios, ultimasSeries, recordesExercicio, melhoresDeSeries, recordesBatidos, NOMES_RECORDE, RECORDE_CURTO,
   TIPOS_SERIE, TIPOS_EXERCICIO, descansoDe, salvarTreino, obterRotina, salvarRotina, resumoTreino, prefs,
 } from './dados.js';
 import { publicarTreino } from '../feed/dados.js';
@@ -18,7 +18,6 @@ import { avatarExercicio } from './fotos.js';
 import { escolherExercicios, escolherTipoSerie, rotulosSeries, escolherDescanso, escolherRir, fmtRir } from './componentes.js';
 
 const CHAVE = 'treinoAtivo';
-const RECORDE_CURTO = { carga: 'Carga', e1rm: '1RM est.', volume: 'Volume' };
 const CHAVE_DESCANSO = 'descansoAtivo';
 
 // ---------- Estado persistente ----------
